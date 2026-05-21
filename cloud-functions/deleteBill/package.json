@@ -1,0 +1,9 @@
+{
+  "name": "deleteBill",
+  "version": "1.0.0",
+  "description": "Cloud function to delete a bill",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "^2.6.0"
+  }
+}

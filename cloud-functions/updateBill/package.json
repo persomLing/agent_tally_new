@@ -1,0 +1,9 @@
+{
+  "name": "updateBill",
+  "version": "1.0.0",
+  "description": "Cloud function to update an existing bill",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "^2.6.0"
+  }
+}

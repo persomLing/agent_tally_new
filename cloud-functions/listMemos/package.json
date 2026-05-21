@@ -1,0 +1,9 @@
+{
+  "name": "listMemos",
+  "version": "1.0.0",
+  "description": "List memos cloud function",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

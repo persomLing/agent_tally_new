@@ -1,0 +1,9 @@
+{
+  "name": "updateMemo",
+  "version": "1.0.0",
+  "description": "Update memo cloud function",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}
