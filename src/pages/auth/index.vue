@@ -102,6 +102,7 @@ async function handleAuthorize() {
   const avatarUrl = tempAvatarUrl.value
 
   const success = await store.authorize({ nickName, avatarUrl })
+  console.log('Authorization result:', success, 'NickName:', nickName, 'AvatarUrl:', avatarUrl)
   if (success) {
     redirectToDetail()
   } else {

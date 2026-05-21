@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import uni from '@dcloudio/vite-plugin-uni'
 import { resolve } from 'path'
-import { copyFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs'
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'fs'
 
 function copyCloudFunctions(): any {
   return {
@@ -15,6 +15,15 @@ function copyCloudFunctions(): any {
       const src = resolve(__dirname, 'cloudfunctions')
       const dest = resolve(__dirname, 'dist/dev/mp-weixin/cloudfunctions')
       copyDir(src, dest)
+    },
+    closeBundle() {
+      const configPath = resolve(__dirname, 'dist/dev/mp-weixin/project.config.json')
+      if (!existsSync(configPath)) return
+      const config = JSON.parse(readFileSync(configPath, 'utf-8'))
+      if (!config.cloudfunctionRoot) {
+        config.cloudfunctionRoot = 'cloudfunctions/'
+        writeFileSync(configPath, JSON.stringify(config, null, 2))
+      }
     },
   }
 }

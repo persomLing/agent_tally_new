@@ -5,7 +5,7 @@
  * Uses the mock registry in @/services/cloud to simulate cloud function responses.
  *
  * The mock handler implements the same aggregation logic as the real
- * cloud-functions/getStatistics/index.js so that the computation itself
+ * cloudfunctions/getStatistics/index.js so that the computation itself
  * is validated through the service layer.
  */
 

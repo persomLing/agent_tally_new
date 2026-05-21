@@ -11,7 +11,9 @@
       "Bash(npm run *)",
       "Bash(git add *)",
       "Bash(npm view *)",
-      "Bash(npx uni *)"
+      "Bash(npx uni *)",
+      "Bash(git status *)",
+      "Bash(git check-ignore *)"
     ]
   },
   "skillOverrides": {}

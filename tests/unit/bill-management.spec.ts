@@ -73,7 +73,7 @@ describe('createBill cloud function', () => {
       })
     ))
 
-    const { main } = require('../../cloud-functions/createBill/index.js')
+    const { main } = require('../../cloudfunctions/createBill/index.js')
 
     const result = await main({
       type: 'expense',
@@ -101,7 +101,7 @@ describe('createBill cloud function', () => {
 
   it('should reject amount that is zero', async () => {
     mockSDK.database.mockReturnValue(makeDb())
-    const { main } = require('../../cloud-functions/createBill/index.js')
+    const { main } = require('../../cloudfunctions/createBill/index.js')
 
     const result = await main({
       type: 'expense', amount: '0', categoryCode: 'expense_food', billDate: '2026-05-21',
@@ -112,7 +112,7 @@ describe('createBill cloud function', () => {
 
   it('should reject amount with more than 2 decimal places', async () => {
     mockSDK.database.mockReturnValue(makeDb())
-    const { main } = require('../../cloud-functions/createBill/index.js')
+    const { main } = require('../../cloudfunctions/createBill/index.js')
 
     const result = await main({
       type: 'expense', amount: '12.345', categoryCode: 'expense_food', billDate: '2026-05-21',
@@ -123,7 +123,7 @@ describe('createBill cloud function', () => {
 
   it('should reject empty amount', async () => {
     mockSDK.database.mockReturnValue(makeDb())
-    const { main } = require('../../cloud-functions/createBill/index.js')
+    const { main } = require('../../cloudfunctions/createBill/index.js')
 
     const result = await main({
       type: 'expense', amount: '', categoryCode: 'expense_food', billDate: '2026-05-21',
@@ -134,7 +134,7 @@ describe('createBill cloud function', () => {
 
   it('should reject invalid category code', async () => {
     mockSDK.database.mockReturnValue(makeDb())
-    const { main } = require('../../cloud-functions/createBill/index.js')
+    const { main } = require('../../cloudfunctions/createBill/index.js')
 
     const result = await main({
       type: 'expense', amount: '12.50', categoryCode: 'nonexistent_code', billDate: '2026-05-21',
@@ -145,7 +145,7 @@ describe('createBill cloud function', () => {
 
   it('should reject category type mismatch', async () => {
     mockSDK.database.mockReturnValue(makeDb())
-    const { main } = require('../../cloud-functions/createBill/index.js')
+    const { main } = require('../../cloudfunctions/createBill/index.js')
 
     const result = await main({
       type: 'expense', amount: '12.50', categoryCode: 'income_salary', billDate: '2026-05-21',
@@ -156,7 +156,7 @@ describe('createBill cloud function', () => {
 
   it('should reject invalid date format', async () => {
     mockSDK.database.mockReturnValue(makeDb())
-    const { main } = require('../../cloud-functions/createBill/index.js')
+    const { main } = require('../../cloudfunctions/createBill/index.js')
 
     const result = await main({
       type: 'expense', amount: '12.50', categoryCode: 'expense_food', billDate: '2026/05/21',
@@ -167,7 +167,7 @@ describe('createBill cloud function', () => {
 
   it('should reject invalid type', async () => {
     mockSDK.database.mockReturnValue(makeDb())
-    const { main } = require('../../cloud-functions/createBill/index.js')
+    const { main } = require('../../cloudfunctions/createBill/index.js')
 
     const result = await main({
       type: 'invalid', amount: '12.50', categoryCode: 'expense_food', billDate: '2026-05-21',
@@ -179,7 +179,7 @@ describe('createBill cloud function', () => {
   it('should return NO_OPENID when context is missing', async () => {
     mockSDK.getWXContext.mockReturnValue({ OPENID: undefined })
     mockSDK.database.mockReturnValue(makeDb())
-    const { main } = require('../../cloud-functions/createBill/index.js')
+    const { main } = require('../../cloudfunctions/createBill/index.js')
 
     const result = await main({
       type: 'expense', amount: '12.50', categoryCode: 'expense_food', billDate: '2026-05-21',
@@ -206,7 +206,7 @@ describe('createBill cloud function', () => {
       })
     ))
 
-    const { main } = require('../../cloud-functions/createBill/index.js')
+    const { main } = require('../../cloudfunctions/createBill/index.js')
 
     const result = await main({
       type: 'expense', amount: '25.00', categoryCode: 'expense_transport',
@@ -231,7 +231,7 @@ describe('createBill cloud function', () => {
       })
     ))
 
-    const { main } = require('../../cloud-functions/createBill/index.js')
+    const { main } = require('../../cloudfunctions/createBill/index.js')
 
     const result = await main({
       type: 'expense', amount: '12.50', categoryCode: 'expense_food',
@@ -255,7 +255,7 @@ describe('createBill cloud function', () => {
       })
     ))
 
-    const { main } = require('../../cloud-functions/createBill/index.js')
+    const { main } = require('../../cloudfunctions/createBill/index.js')
 
     const result = await main({
       type: 'expense', amount: '5.00', categoryCode: 'expense_food',
@@ -282,7 +282,7 @@ describe('updateBill cloud function', () => {
       })
     ))
 
-    const { main } = require('../../cloud-functions/updateBill/index.js')
+    const { main } = require('../../cloudfunctions/updateBill/index.js')
 
     const result = await main({ id: 'bill-001', amount: '20.00', categoryCode: 'expense_transport' })
     expect(result.success).toBe(true)
@@ -304,7 +304,7 @@ describe('updateBill cloud function', () => {
       })
     ))
 
-    const { main } = require('../../cloud-functions/updateBill/index.js')
+    const { main } = require('../../cloudfunctions/updateBill/index.js')
 
     const result = await main({ id: 'bill-other', amount: '30.00' })
     expect(result.success).toBe(false)
@@ -320,7 +320,7 @@ describe('updateBill cloud function', () => {
       })
     ))
 
-    const { main } = require('../../cloud-functions/updateBill/index.js')
+    const { main } = require('../../cloudfunctions/updateBill/index.js')
 
     const result = await main({ id: 'nonexistent-id', amount: '30.00' })
     expect(result.success).toBe(false)
@@ -338,7 +338,7 @@ describe('updateBill cloud function', () => {
       })
     ))
 
-    const { main } = require('../../cloud-functions/updateBill/index.js')
+    const { main } = require('../../cloudfunctions/updateBill/index.js')
 
     const result = await main({ id: 'bill-001', amount: '-5.00' })
     expect(result.success).toBe(false)
@@ -366,7 +366,7 @@ describe('updateBill cloud function', () => {
       })
     ))
 
-    const { main } = require('../../cloud-functions/updateBill/index.js')
+    const { main } = require('../../cloudfunctions/updateBill/index.js')
 
     const result = await main({ id: 'bill-001', remark: '新备注' })
     expect(result.success).toBe(true)
@@ -389,7 +389,7 @@ describe('updateBill cloud function', () => {
       })
     ))
 
-    const { main } = require('../../cloud-functions/updateBill/index.js')
+    const { main } = require('../../cloudfunctions/updateBill/index.js')
 
     const result = await main({ id: 'bill-001', remark: '午餐' })
     expect(result.success).toBe(true)
@@ -409,7 +409,7 @@ describe('deleteBill cloud function', () => {
       })
     ))
 
-    const { main } = require('../../cloud-functions/deleteBill/index.js')
+    const { main } = require('../../cloudfunctions/deleteBill/index.js')
 
     const result = await main({ id: 'bill-001' })
     expect(result.success).toBe(true)
@@ -426,7 +426,7 @@ describe('deleteBill cloud function', () => {
       })
     ))
 
-    const { main } = require('../../cloud-functions/deleteBill/index.js')
+    const { main } = require('../../cloudfunctions/deleteBill/index.js')
 
     const result = await main({ id: 'bill-other' })
     expect(result.success).toBe(false)
@@ -442,7 +442,7 @@ describe('deleteBill cloud function', () => {
       })
     ))
 
-    const { main } = require('../../cloud-functions/deleteBill/index.js')
+    const { main } = require('../../cloudfunctions/deleteBill/index.js')
 
     const result = await main({ id: 'nonexistent-id' })
     expect(result.success).toBe(false)
@@ -456,7 +456,7 @@ describe('deleteBill cloud function', () => {
       })
     ))
 
-    const { main } = require('../../cloud-functions/deleteBill/index.js')
+    const { main } = require('../../cloudfunctions/deleteBill/index.js')
 
     const result = await main({})
     expect(result.success).toBe(false)

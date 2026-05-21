@@ -39,7 +39,7 @@ npm run typecheck      # 仅类型检查
 
 ## 云函数部署
 
-云函数在 `cloud-functions/` 目录下（login、createBill、listBillsByMonth 等共 13 个），上传到微信开发者工具的云开发环境：
+云函数在 `cloudfunctions/` 目录下（login、createBill、listBillsByMonth 等共 13 个），上传到微信开发者工具的云开发环境：
 
 - 微信开发者工具 → 云开发 → 云函数 → 右键上传
 - 或使用 `tcb` CLI 批量部署
@@ -68,6 +68,6 @@ src/
   stores/           # Pinia 状态
   types/            # TypeScript 类型
   utils/            # 工具函数（金额、日期、校验）
-cloud-functions/    # 微信云函数（13 个）
+cloudfunctions/    # 微信云函数（13 个）
 tests/              # Jest 单元测试
 ```
