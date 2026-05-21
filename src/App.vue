@@ -21,23 +21,20 @@ onMounted(async () => {
 </script>
 
 <style>
-* {
+/* WXSS doesn't support universal * selector — use page + view instead */
+page, view, text, image, scroll-view, swiper, swiper-item, navigator, button, input, textarea, label, picker, switch, icon, radio, checkbox, slider, video, map, canvas, form, progress, rich-text, web-view, movable-area, movable-view, cover-view, cover-image {
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
 }
 
-body {
+page {
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
   background-color: v-bind('Colors.Background');
   color: v-bind('Colors.TextPrimary');
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   font-size: 16px;
   line-height: 1.5;
 }
 
-/* Safe area for notched devices */
 .app-loading {
   display: flex;
   align-items: center;
@@ -56,11 +53,5 @@ body {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .app-loading-spinner {
-    animation-duration: 2s;
-  }
 }
 </style>
