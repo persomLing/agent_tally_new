@@ -1,0 +1,13 @@
+{
+  "name": "个人记账",
+  "appid": "",
+  "mp-weixin": {
+    "appid": "",
+    "setting": {
+      "urlCheck": false
+    },
+    "usingComponents": true,
+    "cloud": true,
+    "requiredPrivateInfos": []
+  }
+}

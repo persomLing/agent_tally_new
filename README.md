@@ -17,8 +17,10 @@
 
 ```bash
 npm install
-npm run dev        # 本地开发（H5 预览）
+npm run dev:mp       # 微信小程序开发模式（输出到 dist/dev/mp-weixin）
 ```
+
+用微信开发者工具打开 `dist/dev/mp-weixin` 预览。
 
 ## 测试
 
@@ -31,8 +33,8 @@ npm run test:coverage # 覆盖率报告
 ## 构建
 
 ```bash
-npm run build          # 类型检查 + 生产构建
-npm run dev            # 本地开发服务器
+npm run build:mp       # 微信小程序生产构建（输出到 dist/build/mp-weixin）
+npm run typecheck      # 仅类型检查
 ```
 
 ## 云函数部署

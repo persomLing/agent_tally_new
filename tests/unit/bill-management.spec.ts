@@ -639,7 +639,7 @@ describe('Calculator input logic', () => {
     it('should clear everything', () => {
       let displayValue = '123'
       let accumulator = 45
-      let pendingOperator = '+'
+      let pendingOperator: string | null = '+'
       let isNewEntry = false
 
       displayValue = '0'

@@ -143,7 +143,7 @@ import { getCategoriesByType } from '@/constants/categories'
 import { validateMemoContent } from '@/utils/validator'
 import ConfirmDialog from '@/components/ConfirmDialog/index.vue'
 import EmptyState from '@/components/EmptyState/index.vue'
-import { Colors, Radius, FontSize, FontWeight, Spacing, Duration, ComponentSize } from '@/constants/design-tokens'
+import { Colors, Radius, FontSize, FontWeight, Spacing, Duration, ComponentSize, Shadow } from '@/constants/design-tokens'
 import type { Memo, BillType } from '@/types'
 
 const props = withDefaults(defineProps<{

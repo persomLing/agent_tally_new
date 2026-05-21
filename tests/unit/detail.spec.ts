@@ -31,7 +31,7 @@ jest.mock('@/services/billService', () => ({
   listBillsByMonth: jest.fn(),
 }))
 
-const mockListBillsByMonth = listBillsByMonth as jest.Mock
+const mockListBillsByMonth = listBillsByMonth as jest.MockedFunction<typeof listBillsByMonth>
 
 // ============================================================
 // Test helpers

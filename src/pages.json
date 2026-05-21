@@ -1,0 +1,15 @@
+{
+  "pages": [
+    { "path": "pages/auth/index", "style": { "navigationBarTitleText": "授权登录" } },
+    { "path": "pages/detail/index", "style": { "navigationBarTitleText": "明细" } },
+    { "path": "pages/bill-edit/index", "style": { "navigationBarTitleText": "记账" } },
+    { "path": "pages/statistics/index", "style": { "navigationBarTitleText": "统计" } },
+    { "path": "pages/profile/index", "style": { "navigationBarTitleText": "我的" } }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "个人记账",
+    "navigationBarBackgroundColor": "#F8FAFC",
+    "backgroundColor": "#F8FAFC"
+  }
+}
