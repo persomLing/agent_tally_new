@@ -3,26 +3,38 @@ import uni from '@dcloudio/vite-plugin-uni'
 import { resolve } from 'path'
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'fs'
 
+function distDirs(): string[] {
+  const out: string[] = []
+  const dev = resolve(__dirname, 'dist/dev/mp-weixin')
+  const build = resolve(__dirname, 'dist/build/mp-weixin')
+  if (existsSync(dev)) out.push(dev)
+  if (existsSync(build)) out.push(build)
+  return out.length ? out : [dev]
+}
+
 function copyCloudFunctions(): any {
   return {
     name: 'copy-cloudfunctions',
     buildStart() {
-      const src = resolve(__dirname, 'cloudfunctions')
-      const dest = resolve(__dirname, 'dist/dev/mp-weixin/cloudfunctions')
-      copyDir(src, dest)
+      for (const dir of distDirs()) {
+        copyDir(resolve(__dirname, 'cloudfunctions'), resolve(dir, 'cloudfunctions'))
+      }
     },
     configureServer() {
-      const src = resolve(__dirname, 'cloudfunctions')
-      const dest = resolve(__dirname, 'dist/dev/mp-weixin/cloudfunctions')
-      copyDir(src, dest)
+      for (const dir of distDirs()) {
+        copyDir(resolve(__dirname, 'cloudfunctions'), resolve(dir, 'cloudfunctions'))
+      }
     },
     closeBundle() {
-      const configPath = resolve(__dirname, 'dist/dev/mp-weixin/project.config.json')
-      if (!existsSync(configPath)) return
-      const config = JSON.parse(readFileSync(configPath, 'utf-8'))
-      if (!config.cloudfunctionRoot) {
-        config.cloudfunctionRoot = 'cloudfunctions/'
-        writeFileSync(configPath, JSON.stringify(config, null, 2))
+      for (const outDir of distDirs()) {
+        copyDir(resolve(__dirname, 'cloudfunctions'), resolve(outDir, 'cloudfunctions'))
+        const configPath = resolve(outDir, 'project.config.json')
+        if (!existsSync(configPath)) continue
+        const config = JSON.parse(readFileSync(configPath, 'utf-8'))
+        if (!config.cloudfunctionRoot) {
+          config.cloudfunctionRoot = 'cloudfunctions/'
+          writeFileSync(configPath, JSON.stringify(config, null, 2))
+        }
       }
     },
   }

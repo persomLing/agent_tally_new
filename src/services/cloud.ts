@@ -1,18 +1,21 @@
-/**
- * Cloud function invocation wrapper
- * Abstracts WeChat cloud function calls and provides unified error handling.
- */
-
 import type { CloudResult } from '@/types'
 import { getErrorMessage } from '@/constants/error-codes'
 
-/**
- * Simulated cloud function call.
- * In production, this would use wx.cloud.callFunction().
- * For testing/development, we can inject mock handlers.
- */
+const CLOUD_TIMEOUT_MS = 8000
 
-// Mock registry — allows tests and dev to provide implementations
+let inited = false
+
+export function initCloud() {
+  if (inited) return
+  inited = true
+  try {
+    wx.cloud.init({ env: wx.cloud.DYNAMIC_CURRENT_ENV, traceUser: true })
+  } catch {
+    // cloud SDK unavailable in test mode — calls will fail gracefully
+  }
+}
+
+// Mock registry — only used in tests
 const mockHandlers = new Map<string, (params: any) => any>()
 
 export function __registerMock(name: string, handler: (params: any) => any) {
@@ -28,19 +31,27 @@ export async function callCloudFunction<T = any>(
   params?: Record<string, any>
 ): Promise<CloudResult<T>> {
   try {
-    // In production: const res = await wx.cloud.callFunction({ name, data: params })
-    // For now, use mock registry or throw a meaningful error
     if (mockHandlers.has(name)) {
       const handler = mockHandlers.get(name)!
       const result = await Promise.resolve(handler(params))
       return result as CloudResult<T>
     }
 
-    // In production, the SDK handles this
-    // For standalone dev, throw a clear message
-    throw new Error(`Cloud function "${name}" not mocked. Register with __registerMock().`)
+    if (typeof wx?.cloud?.callFunction !== 'function') {
+      return {
+        success: false,
+        errorCode: 'CLOUD_UNAVAILABLE',
+        message: '云开发 SDK 不可用，请在微信公众平台注册 AppID 并开通云开发',
+      }
+    }
+
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('云函数调用超时，请检查云环境是否已开通')), CLOUD_TIMEOUT_MS)
+    )
+
+    const res = await Promise.race([wx.cloud.callFunction({ name, data: params }), timeout])
+    return res.result as CloudResult<T>
   } catch (err: any) {
-    // Catch and normalize errors
     if (err.errorCode) {
       return err as CloudResult<T>
     }
@@ -52,7 +63,6 @@ export async function callCloudFunction<T = any>(
   }
 }
 
-/** Convenience wrapper: unwrap data or throw */
 export async function callFunctionWithData<T = any>(
   name: string,
   params?: Record<string, any>

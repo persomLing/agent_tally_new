@@ -21,3 +21,6 @@ Thumbs.db
 # WeChat dev
 dist/project.config.json
 cloudfunctions/*/node_modules/
+
+# Bugfix
+BUGFIX_2026-05-21.md

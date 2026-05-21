@@ -8,11 +8,17 @@
 </template>
 
 <script setup lang="ts">
+import { onLaunch } from '@dcloudio/uni-app'
 import { onMounted } from 'vue'
 import { useUserStore } from '@/stores/userStore'
 import { Colors } from '@/constants/design-tokens'
+import { initCloud } from '@/services/cloud'
 
 const userStore = useUserStore()
+
+onLaunch(() => {
+  initCloud()
+})
 
 onMounted(async () => {
   await userStore.checkAuth()
