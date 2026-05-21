@@ -19,4 +19,5 @@ Thumbs.db
 .env.*.local
 
 # WeChat dev
-project.config.json
+dist/project.config.json
+cloudfunctions/*/node_modules/
