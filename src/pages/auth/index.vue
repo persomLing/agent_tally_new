@@ -20,10 +20,16 @@
           @chooseavatar="onChooseAvatar"
         >
           <img
+            v-if="tempAvatarUrl"
             class="auth-avatar-img"
-            :src="tempAvatarUrl || defaultAvatarUrl"
+            :src="tempAvatarUrl"
             alt="头像"
           />
+          <div v-else class="auth-avatar-placeholder">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <path d="M16 4a6 6 0 1 1 0 12 6 6 0 0 1 0-12zm0 14c6 0 10 3 10 8v2H6v-2c0-5 4-8 10-8z" fill="#B0B8C8"/>
+            </svg>
+          </div>
           <div class="auth-avatar-overlay">
             <span class="auth-avatar-camera">📷</span>
           </div>
@@ -76,7 +82,6 @@ const errorCodes = ErrorCodes
 const showRejected = ref(false)
 const tempAvatarUrl = ref('')
 const tempNickName = ref('')
-const defaultAvatarUrl = 'https://mmbiz.qpic.cn/mmbiz/icTdbqWNOwNRnaQianF4zJ0lY6q6ZiarRas/0'
 
 onMounted(async () => {
   const authorized = await store.checkAuth()
@@ -94,7 +99,7 @@ async function handleAuthorize() {
   showRejected.value = false
 
   const nickName = tempNickName.value.trim() || '微信用户'
-  const avatarUrl = tempAvatarUrl.value || defaultAvatarUrl
+  const avatarUrl = tempAvatarUrl.value
 
   const success = await store.authorize({ nickName, avatarUrl })
   if (success) {
@@ -169,6 +174,15 @@ function redirectToDetail() {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.auth-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  background: #E8ECF2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .auth-avatar-overlay {
