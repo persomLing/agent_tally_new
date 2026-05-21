@@ -13,14 +13,22 @@
     <!-- 授权页面 -->
     <div v-else class="auth-container">
       <div class="auth-brand">
-        <div class="auth-logo">
-          <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-            <rect width="64" height="64" rx="16" fill="#4F6EF7"/>
-            <path d="M20 44V28l12-8 12 8v16H20z" fill="white" opacity="0.9"/>
-            <path d="M24 36h16M24 40h12" stroke="white" stroke-width="2" stroke-linecap="round"/>
-            <circle cx="32" cy="30" r="4" fill="white" opacity="0.95"/>
-          </svg>
-        </div>
+        <!-- 头像选择：使用微信新 API open-type="chooseAvatar" 替代废弃的 getUserProfile -->
+        <button
+          class="auth-avatar-btn"
+          open-type="chooseAvatar"
+          @chooseavatar="onChooseAvatar"
+        >
+          <img
+            class="auth-avatar-img"
+            :src="tempAvatarUrl || defaultAvatarUrl"
+            alt="头像"
+          />
+          <div class="auth-avatar-overlay">
+            <span class="auth-avatar-camera">📷</span>
+          </div>
+        </button>
+
         <h2 class="auth-title">个人记账</h2>
       </div>
 
@@ -28,18 +36,24 @@
         简洁清晰的记账工具，轻松管理每一笔收支
       </p>
 
-      <p class="auth-info">
-        授权微信头像和昵称后即可开启记账之旅
-      </p>
+      <!-- 昵称输入：使用微信新 API type="nickname" 替代废弃的 getUserProfile -->
+      <div class="auth-nickname-wrap">
+        <input
+          class="auth-nickname-input"
+          type="nickname"
+          v-model="tempNickName"
+          placeholder="请输入你的昵称"
+        />
+      </div>
 
       <button
         class="auth-btn"
         :class="{ 'auth-btn-loading': store.isLoading }"
-        :disabled="store.isLoading"
+        :disabled="store.isLoading || !tempNickName.trim()"
         @click="handleAuthorize"
       >
         <span v-if="store.isLoading" class="auth-btn-spinner"></span>
-        <span>{{ store.isLoading ? '授权中...' : '微信授权进入' }}</span>
+        <span>{{ store.isLoading ? '进入中...' : '开始记账' }}</span>
       </button>
 
       <transition name="fade">
@@ -60,6 +74,9 @@ import { Colors, FontSize, FontWeight, Radius, Spacing } from '@/constants/desig
 const store = useUserStore()
 const errorCodes = ErrorCodes
 const showRejected = ref(false)
+const tempAvatarUrl = ref('')
+const tempNickName = ref('')
+const defaultAvatarUrl = 'https://mmbiz.qpic.cn/mmbiz/icTdbqWNOwNRnaQianF4zJ0lY6q6ZiarRas/0'
 
 onMounted(async () => {
   const authorized = await store.checkAuth()
@@ -68,54 +85,30 @@ onMounted(async () => {
   }
 })
 
+// 微信 <button open-type="chooseAvatar"> 回调
+function onChooseAvatar(e: any) {
+  tempAvatarUrl.value = e.detail?.avatarUrl ?? ''
+}
+
 async function handleAuthorize() {
   showRejected.value = false
 
-  try {
-    let nickName = ''
-    let avatarUrl = ''
+  const nickName = tempNickName.value.trim() || '微信用户'
+  const avatarUrl = tempAvatarUrl.value || defaultAvatarUrl
 
-    // 尝试调用微信原生授权 API
-    if (typeof wx !== 'undefined' && typeof wx.getUserProfile === 'function') {
-      const res: any = await new Promise((resolve, reject) => {
-        wx.getUserProfile({
-          desc: '用于完善用户资料',
-          success: resolve,
-          fail: reject,
-        })
-      })
-      nickName = res.userInfo?.nickName ?? ''
-      avatarUrl = res.userInfo?.avatarUrl ?? ''
-    } else {
-      // 开发/测试环境：使用模拟数据
-      nickName = '微信用户'
-      avatarUrl = 'https://mmbiz.qpic.cn/mmbiz/icTdbqWNOwNRnaQianF4zJ0lY6q6ZiarRas/0'
-    }
-
-    if (!nickName || !avatarUrl) {
-      showRejected.value = true
-      return
-    }
-
-    const success = await store.authorize({ nickName, avatarUrl })
-    if (success) {
-      redirectToDetail()
-    } else {
-      showRejected.value = true
-    }
-  } catch {
-    // 用户拒绝授权
+  const success = await store.authorize({ nickName, avatarUrl })
+  if (success) {
+    redirectToDetail()
+  } else {
     showRejected.value = true
   }
 }
 
 function redirectToDetail() {
-  // uni-app 环境
   if (typeof uni !== 'undefined' && typeof uni.navigateTo === 'function') {
     uni.navigateTo({ url: '/pages/detail/index' })
     return
   }
-  // 浏览器环境（开发/测试）
   window.location.href = '/pages/detail/index'
 }
 </script>
@@ -152,14 +145,46 @@ function redirectToDetail() {
   margin-bottom: v-bind('Spacing.Xl2');
 }
 
-.auth-logo {
+/* 头像选择按钮 */
+.auth-avatar-btn {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  padding: 0;
+  border: 2px dashed v-bind('Colors.Border');
+  border-radius: 50%;
+  background: transparent;
+  overflow: hidden;
+  margin: 0 auto v-bind('Spacing.Lg');
   display: flex;
+  align-items: center;
   justify-content: center;
-  margin-bottom: v-bind('Spacing.Lg');
 }
 
-.auth-logo svg {
-  display: block;
+.auth-avatar-btn::after {
+  border: none;
+}
+
+.auth-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.auth-avatar-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: linear-gradient(transparent 60%, rgba(0, 0, 0, 0.35));
+  border-radius: 50%;
+}
+
+.auth-avatar-camera {
+  font-size: 18px;
+  margin-bottom: 6px;
+  line-height: 1;
 }
 
 .auth-title {
@@ -177,11 +202,27 @@ function redirectToDetail() {
   line-height: 1.5;
 }
 
-.auth-info {
-  font-size: v-bind('FontSize.BodySmall');
-  color: v-bind('Colors.TextTertiary');
+/* 昵称输入 */
+.auth-nickname-wrap {
   margin: 0 0 v-bind('Spacing.Xl2');
-  line-height: 1.5;
+}
+
+.auth-nickname-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 v-bind('Spacing.Md');
+  border: 1px solid v-bind('Colors.Border');
+  border-radius: v-bind('Radius.Md');
+  font-size: v-bind('FontSize.Body');
+  color: v-bind('Colors.TextPrimary');
+  text-align: center;
+  background: #ffffff;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.auth-nickname-input:focus {
+  border-color: v-bind('Colors.Primary');
 }
 
 .auth-btn {
@@ -249,19 +290,5 @@ function redirectToDetail() {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .auth-btn,
-  .auth-btn-spinner,
-  .fade-enter-active,
-  .fade-leave-active {
-    animation: none;
-    transition: none;
-  }
-
-  .auth-btn:active:not(:disabled) {
-    transform: none;
-  }
 }
 </style>

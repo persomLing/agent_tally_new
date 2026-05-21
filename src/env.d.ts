@@ -9,7 +9,6 @@ declare module '*.vue' {
 // WeChat Mini-Program globals (uni-app)
 declare const wx: {
   login(options: { success: (res: { code: string }) => void; fail?: (err: any) => void }): void
-  getUserProfile(options: { desc: string; success: (res: any) => void; fail?: (err: any) => void }): void
   cloud?: { callFunction(options: { name: string; data?: any }): Promise<any> }
 }
 
