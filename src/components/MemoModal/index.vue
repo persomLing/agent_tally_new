@@ -202,7 +202,6 @@ const deleteMessage = computed(() => {
 
 function selectMemo(memo: Memo) {
   emit('select', memo.content)
-  onClose()
 }
 
 function onClose() {
