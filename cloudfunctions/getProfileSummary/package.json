@@ -1,0 +1,9 @@
+{
+  "name": "getProfileSummary",
+  "version": "1.0.0",
+  "description": "Get user profile summary",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

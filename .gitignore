@@ -18,9 +18,6 @@ Thumbs.db
 .env.local
 .env.*.local
 
-# WeChat dev
-dist/project.config.json
+# Cloud function dependencies (installed via postinstall)
 cloudfunctions/*/node_modules/
-
-# Bugfix
-BUGFIX_2026-05-21.md
+cloudfunctions/*/package-lock.json

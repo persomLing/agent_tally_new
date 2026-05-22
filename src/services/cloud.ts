@@ -1,18 +1,21 @@
 import type { CloudResult } from '@/types'
 import { getErrorMessage } from '@/constants/error-codes'
 
-const CLOUD_TIMEOUT_MS = 8000
+const CLOUD_TIMEOUT_MS = 30000
 
-let inited = false
+function ensureInit() {
+  if (typeof wx?.cloud?.init === 'function') {
+    try {
+      // @ts-ignore WeChat SDK
+      wx.cloud.init({ env: 'cloud1-d2goyji7jb6c9f8b5', traceUser: true })
+    } catch {
+      // cloud SDK unavailable
+    }
+  }
+}
 
 export function initCloud() {
-  if (inited) return
-  inited = true
-  try {
-    wx.cloud.init({ env: wx.cloud.DYNAMIC_CURRENT_ENV, traceUser: true })
-  } catch {
-    // cloud SDK unavailable in test mode — calls will fail gracefully
-  }
+  ensureInit()
 }
 
 // Mock registry — only used in tests
@@ -37,16 +40,18 @@ export async function callCloudFunction<T = any>(
       return result as CloudResult<T>
     }
 
+    ensureInit()
+
     if (typeof wx?.cloud?.callFunction !== 'function') {
       return {
         success: false,
         errorCode: 'CLOUD_UNAVAILABLE',
-        message: '云开发 SDK 不可用，请在微信公众平台注册 AppID 并开通云开发',
+        message: '云开发 SDK 不可用，请确认已开通云开发环境',
       }
     }
 
     const timeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('云函数调用超时，请检查云环境是否已开通')), CLOUD_TIMEOUT_MS)
+      setTimeout(() => reject(new Error('云函数调用超时，请检查网络或云环境')), CLOUD_TIMEOUT_MS)
     )
 
     const res = await Promise.race([wx.cloud.callFunction({ name, data: params }), timeout])

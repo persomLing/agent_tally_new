@@ -24,6 +24,7 @@
             class="auth-avatar-img"
             :src="tempAvatarUrl"
             alt="头像"
+            @error="tempAvatarUrl = ''"
           />
           <div v-else class="auth-avatar-placeholder">
             <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
