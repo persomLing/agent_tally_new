@@ -73,7 +73,7 @@
 
                   <!-- Display Mode -->
                   <div v-else class="memo-item-display">
-                    <span class="memo-item-text">{{ memo.content }}</span>
+                    <span class="memo-item-text" @click="selectMemo(memo)">{{ memo.content }}</span>
                     <div class="memo-item-actions">
                       <button class="memo-item-action-btn" @click="startEdit(memo)" aria-label="编辑">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -155,6 +155,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   close: []
+  select: [content: string]
   'update:visible': [value: boolean]
 }>()
 
@@ -198,6 +199,11 @@ const deleteMessage = computed(() => {
 })
 
 // ===== Methods =====
+
+function selectMemo(memo: Memo) {
+  emit('select', memo.content)
+  onClose()
+}
 
 function onClose() {
   resetEditing()
@@ -543,6 +549,13 @@ watch(
   color: v-bind('Colors.TextSecondary');
   line-height: 1.5;
   word-break: break-word;
+  cursor: pointer;
+  padding: 4px 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.memo-item-text:active {
+  opacity: 0.6;
 }
 
 .memo-item-actions {

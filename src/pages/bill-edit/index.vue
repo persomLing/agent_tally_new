@@ -86,7 +86,7 @@
       </div>
 
       <!-- Memo Modal -->
-      <MemoModal v-model:visible="showMemoModal" :type="form.type" @close="showMemoModal = false; loadMemos()" />
+      <MemoModal v-model:visible="showMemoModal" :type="form.type" @select="onMemoSelect" @close="showMemoModal = false; loadMemos()" />
 
       <!-- Delete Button (Edit Mode) -->
       <div v-if="isEditMode" class="delete-section">
@@ -509,6 +509,11 @@ function onRemarkInput() {
 }
 
 // ===== Memos =====
+function onMemoSelect(content: string) {
+  form.value.remark = content
+  hasUnsavedChanges.value = true
+}
+
 async function loadMemos() {
   if (!form.value.type || !form.value.categoryCode) {
     memos.value = []
