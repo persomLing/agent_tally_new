@@ -62,7 +62,12 @@
 
       <!-- Section: Remark -->
       <div class="section">
-        <div class="section-title">备注</div>
+        <div class="section-title-row">
+          <div class="section-title">备注</div>
+          <button class="section-action-btn" @click="showMemoModal = true">
+            记忆库 ›
+          </button>
+        </div>
         <input
           class="remark-input"
           v-model="form.remark"
@@ -79,6 +84,9 @@
           >{{ memo.content }}</span>
         </div>
       </div>
+
+      <!-- Memo Modal -->
+      <MemoModal v-model:visible="showMemoModal" :type="form.type" @close="showMemoModal = false; loadMemos()" />
 
       <!-- Delete Button (Edit Mode) -->
       <div v-if="isEditMode" class="delete-section">
@@ -145,10 +153,11 @@ import { getToday, formatDateLabel } from '@/utils/date'
 import { validateBillForm } from '@/utils/validator'
 import { truncateToTwoDecimals, centsToYuan } from '@/utils/money'
 import { createBill, updateBill, deleteBill, getBillById } from '@/services/billService'
-import { listMemos } from '@/services/memoService'
+import { listMemos, createMemo } from '@/services/memoService'
 import { useBillStore } from '@/stores/billStore'
 import { Colors, FontSize, FontWeight, Spacing, Radius, Shadow, Duration } from '@/constants/design-tokens'
 import ConfirmDialog from '@/components/ConfirmDialog/index.vue'
+import MemoModal from '@/components/MemoModal/index.vue'
 import type { BillFormData, BillType, CategoryItem, Memo } from '@/types'
 
 // ===== Route / Page Params =====
@@ -186,6 +195,7 @@ const formattedDate = computed(() => formatDateLabel(form.value.billDate))
 // ===== UI State =====
 const showDeleteConfirm = ref(false)
 const showBackConfirm = ref(false)
+const showMemoModal = ref(false)
 const errorMessage = ref('')
 const isLoading = ref(false)
 
@@ -425,6 +435,21 @@ async function onSave() {
       })
     }
     billStore.notifyBillChanged()
+
+    // Auto-deposit remark to memos
+    const remark = form.value.remark?.trim()
+    if (remark && form.value.categoryCode) {
+      try {
+        await createMemo({
+          type: form.value.type,
+          categoryCode: form.value.categoryCode,
+          content: remark,
+        })
+      } catch {
+        // Silent — memo deposit is best-effort
+      }
+    }
+
     navigateBack()
   } catch (err: any) {
     errorMessage.value = err.message || '保存失败，请重试'
@@ -687,11 +712,39 @@ async function loadMemos() {
   padding: v-bind('Spacing.Lg') v-bind('Spacing.PageMargin');
 }
 
+.section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: v-bind('Spacing.Md');
+}
+
 .section-title {
   font-size: v-bind('FontSize.BodySmall');
   font-weight: v-bind('FontWeight.Medium');
   color: v-bind('Colors.TextSecondary');
   margin-bottom: v-bind('Spacing.Md');
+}
+
+.section-title-row .section-title {
+  margin-bottom: 0;
+}
+
+.section-action-btn {
+  background: none;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  -webkit-appearance: none;
+  font-size: v-bind('FontSize.BodySmall');
+  color: v-bind('Colors.Primary');
+  cursor: pointer;
+  padding: 4px 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.section-action-btn:active {
+  opacity: 0.7;
 }
 
 /* ===== Category Grid ===== */

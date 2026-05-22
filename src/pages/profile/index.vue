@@ -107,6 +107,9 @@
       </view>
     </view>
 
+    <!-- 记忆库弹窗 -->
+    <MemoModal v-model:visible="showMemoModal" @close="showMemoModal = false" />
+
     <!-- 底部导航 -->
     <BottomNav current="pages/profile/index" />
   </view>
@@ -121,6 +124,7 @@ import { formatCents } from '@/utils/money'
 import { Colors, FontSize, FontWeight, Spacing, Radius, Shadow, ComponentSize } from '@/constants/design-tokens'
 import type { ProfileSummary } from '@/types'
 import ConfirmDialog from '@/components/ConfirmDialog/index.vue'
+import MemoModal from '@/components/MemoModal/index.vue'
 import BottomNav from '@/components/BottomNav/index.vue'
 
 const userStore = useUserStore()
@@ -130,6 +134,7 @@ const profileData = ref<ProfileSummary | null>(null)
 const isLoading = ref(false)
 const confirmVisible = ref(false)
 const privacyVisible = ref(false)
+const showMemoModal = ref(false)
 
 const nickName = computed(() => userStore.nickName || profileData.value?.nickName || '')
 const avatar = computed(() => userStore.avatarUrl || profileData.value?.avatarUrl || '')
@@ -176,7 +181,7 @@ function onEditProfile() {
 }
 
 function onOpenMemo() {
-  uni.showToast({ title: '功能开发中', icon: 'none' })
+  showMemoModal.value = true
 }
 
 function onOpenPrivacy() {
