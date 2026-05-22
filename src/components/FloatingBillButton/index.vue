@@ -3,9 +3,9 @@
     class="floating-btn"
     :class="{ 'floating-btn-dragging': isDragging }"
     :style="btnStyle"
-    @mousedown="onDragStart"
-    @touchstart.prevent="onDragStart"
-    @click="onClick"
+    @touchstart="onDragStart"
+    @touchmove.stop.prevent="onDragMove"
+    @touchend="onDragEnd"
     role="button"
     :aria-label="'记账'"
   >
@@ -14,7 +14,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import { Colors, Shadow, ComponentSize } from '@/constants/design-tokens'
 
 const emit = defineEmits<{
@@ -23,13 +23,30 @@ const emit = defineEmits<{
 
 const BTN_SIZE = 56
 const MARGIN = 16
+const MOVE_THRESHOLD = 5
 
-const x = ref(window.innerWidth - BTN_SIZE - MARGIN)
-const y = ref(window.innerHeight - BTN_SIZE - MARGIN - 50) // 50 = bottom nav
+function screenWidth(): number {
+  if (typeof uni !== 'undefined' && uni.getWindowInfo) {
+    return uni.getWindowInfo().windowWidth
+  }
+  return 375
+}
+
+function screenHeight(): number {
+  if (typeof uni !== 'undefined' && uni.getWindowInfo) {
+    return uni.getWindowInfo().windowHeight
+  }
+  return 667
+}
+
+const x = ref(screenWidth() - BTN_SIZE - MARGIN)
+const y = ref(screenHeight() - BTN_SIZE - MARGIN - 50)
 const isDragging = ref(false)
-const dragStartX = ref(0)
-const dragStartY = ref(0)
 const hasMoved = ref(false)
+const startX = ref(0)
+const startY = ref(0)
+const dragOffsetX = ref(0)
+const dragOffsetY = ref(0)
 
 const btnStyle = computed(() => ({
   position: 'fixed' as const,
@@ -40,29 +57,32 @@ const btnStyle = computed(() => ({
   height: `${BTN_SIZE}px`,
 }))
 
-function onDragStart(e: MouseEvent | TouchEvent) {
+function onDragStart(e: TouchEvent) {
   isDragging.value = true
   hasMoved.value = false
-  const pos = getEventPos(e)
-  dragStartX.value = pos.x - x.value
-  dragStartY.value = pos.y - y.value
-
-  document.addEventListener('mousemove', onDragMove)
-  document.addEventListener('mouseup', onDragEnd)
-  document.addEventListener('touchmove', onDragMove)
-  document.addEventListener('touchend', onDragEnd)
+  const touch = e.touches[0]
+  startX.value = touch.clientX
+  startY.value = touch.clientY
+  dragOffsetX.value = touch.clientX - x.value
+  dragOffsetY.value = touch.clientY - y.value
 }
 
-function onDragMove(e: MouseEvent | TouchEvent) {
+function onDragMove(e: TouchEvent) {
   if (!isDragging.value) return
-  hasMoved.value = true
-  const pos = getEventPos(e)
-  let newX = pos.x - dragStartX.value
-  let newY = pos.y - dragStartY.value
+  const touch = e.touches[0]
 
-  // Clamp to viewport
-  newX = Math.max(MARGIN, Math.min(window.innerWidth - BTN_SIZE - MARGIN, newX))
-  newY = Math.max(MARGIN, Math.min(window.innerHeight - BTN_SIZE - MARGIN - 50, newY))
+  if (!hasMoved.value) {
+    const dx = Math.abs(touch.clientX - startX.value)
+    const dy = Math.abs(touch.clientY - startY.value)
+    if (dx < MOVE_THRESHOLD && dy < MOVE_THRESHOLD) return
+    hasMoved.value = true
+  }
+
+  let newX = touch.clientX - dragOffsetX.value
+  let newY = touch.clientY - dragOffsetY.value
+
+  newX = Math.max(MARGIN, Math.min(screenWidth() - BTN_SIZE - MARGIN, newX))
+  newY = Math.max(MARGIN, Math.min(screenHeight() - BTN_SIZE - MARGIN - 50, newY))
 
   x.value = newX
   y.value = newY
@@ -70,47 +90,26 @@ function onDragMove(e: MouseEvent | TouchEvent) {
 
 function onDragEnd() {
   isDragging.value = false
-  document.removeEventListener('mousemove', onDragMove)
-  document.removeEventListener('mouseup', onDragEnd)
-  document.removeEventListener('touchmove', onDragMove)
-  document.removeEventListener('touchend', onDragEnd)
 
-  // Snap to nearest edge
+  if (!hasMoved.value) {
+    emit('click')
+    return
+  }
+
   snapToEdge()
 }
 
 function snapToEdge() {
-  const rightDist = window.innerWidth - x.value - BTN_SIZE
+  const rightDist = screenWidth() - x.value - BTN_SIZE
   const leftDist = x.value
-  const bottomDist = window.innerHeight - y.value - BTN_SIZE
-  const topDist = y.value
 
-  // Determine which edge is closest
-  const hEdge = rightDist < leftDist ? 'right' : 'left'
-  const vEdge = bottomDist < topDist ? 'bottom' : 'top'
-
-  // Prefer horizontal edges
-  if (hEdge === 'right') {
-    x.value = window.innerWidth - BTN_SIZE - MARGIN
+  if (rightDist < leftDist) {
+    x.value = screenWidth() - BTN_SIZE - MARGIN
   } else {
     x.value = MARGIN
   }
 
-  // Keep vertical within safe range but prefer horizontal snapping
-  y.value = Math.max(MARGIN, Math.min(window.innerHeight - BTN_SIZE - MARGIN - 50, y.value))
-}
-
-function getEventPos(e: MouseEvent | TouchEvent): { x: number; y: number } {
-  if ('touches' in e) {
-    return { x: e.touches[0].clientX, y: e.touches[0].clientY }
-  }
-  return { x: e.clientX, y: e.clientY }
-}
-
-function onClick() {
-  if (!hasMoved.value) {
-    emit('click')
-  }
+  y.value = Math.max(MARGIN, Math.min(screenHeight() - BTN_SIZE - MARGIN - 50, y.value))
 }
 </script>
 

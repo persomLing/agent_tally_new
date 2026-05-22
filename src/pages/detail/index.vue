@@ -34,29 +34,35 @@
         <view
           v-for="bill in group.bills"
           :key="bill._id"
-          class="bill-item"
-          @click="goToBillEdit(bill._id!)"
-          data-testid="bill-item"
+          class="bill-item-wrapper"
         >
-          <view class="bill-left">
+          <SwipeAction @delete="onDeleteBill(bill._id!)">
             <view
-              class="category-icon"
-              :style="{ backgroundColor: getCategory(bill.categoryCode)?.color || '#94A3B8' }"
+              class="bill-item"
+              @click="goToBillEdit(bill._id!)"
+              data-testid="bill-item"
             >
-              <text class="category-icon-text">{{ bill.categoryName.charAt(0) }}</text>
+              <view class="bill-left">
+                <view
+                  class="category-icon"
+                  :style="{ backgroundColor: getCategory(bill.categoryCode)?.color || '#94A3B8' }"
+                >
+                  <text class="category-icon-text">{{ bill.categoryName.charAt(0) }}</text>
+                </view>
+                <view class="bill-info">
+                  <text class="category-name">{{ bill.categoryName }}</text>
+                  <text v-if="bill.remark" class="bill-remark" data-testid="bill-remark">{{ bill.remark }}</text>
+                </view>
+              </view>
+              <text
+                class="bill-amount"
+                :class="bill.type"
+                :data-testid="`amount-${bill.type}`"
+              >
+                {{ formatAmountWithSign(bill.amount, bill.type) }}
+              </text>
             </view>
-            <view class="bill-info">
-              <text class="category-name">{{ bill.categoryName }}</text>
-              <text v-if="bill.remark" class="bill-remark" data-testid="bill-remark">{{ bill.remark }}</text>
-            </view>
-          </view>
-          <text
-            class="bill-amount"
-            :class="bill.type"
-            :data-testid="`amount-${bill.type}`"
-          >
-            {{ formatAmountWithSign(bill.amount, bill.type) }}
-          </text>
+          </SwipeAction>
         </view>
       </view>
     </view>
@@ -70,12 +76,14 @@
 
     <!-- 悬浮记账按钮 -->
     <FloatingBillButton @click="goToAddBill" />
+    <!-- 底部导航 -->
+    <BottomNav current="pages/detail/index" />
   </view>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { listBillsByMonth } from '@/services/billService'
+import { listBillsByMonth, deleteBill } from '@/services/billService'
 import { useBillStore } from '@/stores/billStore'
 import { getCategory } from '@/constants/categories'
 import { formatAmountWithSign } from '@/utils/money'
@@ -86,6 +94,8 @@ import type { Bill } from '@/types'
 import MonthPicker from '@/components/MonthPicker/index.vue'
 import EmptyState from '@/components/EmptyState/index.vue'
 import FloatingBillButton from '@/components/FloatingBillButton/index.vue'
+import SwipeAction from '@/components/SwipeAction/index.vue'
+import BottomNav from '@/components/BottomNav/index.vue'
 
 const billStore = useBillStore()
 
@@ -145,13 +155,30 @@ async function loadData() {
 }
 
 function goToBillEdit(billId: string) {
-  // 跳转到编辑页，携带账单 ID
-  // wx.navigateTo({ url: `/pages/bill-edit/index?id=${billId}` })
+  uni.navigateTo({ url: `/pages/bill-edit/index?id=${billId}` })
+}
+
+async function onDeleteBill(billId: string) {
+  uni.showModal({
+    title: '确认删除',
+    content: '删除后不可恢复，确定要删除该账单吗？',
+    success: async (res) => {
+      if (res.confirm) {
+        try {
+          await deleteBill(billId)
+          billStore.notifyBillChanged()
+          loadData()
+          uni.showToast({ title: '已删除', icon: 'success' })
+        } catch {
+          uni.showToast({ title: '删除失败', icon: 'none' })
+        }
+      }
+    },
+  })
 }
 
 function goToAddBill() {
-  // 跳转到新增账单页
-  // wx.navigateTo({ url: `/pages/bill-edit/index` })
+  uni.navigateTo({ url: '/pages/bill-edit/index' })
 }
 
 // ===== Watchers =====
@@ -173,7 +200,7 @@ onMounted(() => {
 .detail-page {
   min-height: 100vh;
   background-color: v-bind('Colors.Background');
-  padding-bottom: 80px;
+  padding-bottom: calc(v-bind('ComponentSize.BottomNavHeight') + v-bind('Spacing.Xl3'));
 }
 
 /* ---- 顶部汇总卡片 ---- */
@@ -267,12 +294,15 @@ onMounted(() => {
   padding: v-bind('Spacing.Sm') 0;
 }
 
+.bill-item-wrapper:not(:last-child) .bill-item {
+  border-bottom: 1px solid v-bind('Colors.Border');
+}
+
 .bill-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: v-bind('Spacing.Md') 0;
-  border-bottom: 1px solid v-bind('Colors.Border');
   min-height: v-bind('ComponentSize.ListItemHeight');
   cursor: pointer;
   transition: background-color 150ms ease;

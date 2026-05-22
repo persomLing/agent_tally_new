@@ -15,6 +15,7 @@
     "@dcloudio/uni-app": "^3.0.0-alpha-5010120260519001",
     "@dcloudio/uni-mp-weixin": "^3.0.0-alpha-5010120260519001",
     "@dcloudio/vite-plugin-uni": "^3.0.0-alpha-5010120260519001",
+    "decimal.js": "^10.6.0",
     "pinia": "^2.1.0",
     "vue": "^3.4.0"
   },

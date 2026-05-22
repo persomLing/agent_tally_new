@@ -11,19 +11,14 @@
     <!-- Scrollable Content -->
     <div class="content-scroll">
       <!-- Type Toggle -->
-      <div class="type-toggle">
-        <button
-          :class="['type-tab', { active: form.type === 'expense', 'tab-expense': form.type === 'expense' }]"
-          @click="switchType('expense')"
-        >支出</button>
-        <button
-          :class="['type-tab', { active: form.type === 'income', 'tab-income': form.type === 'income' }]"
-          @click="switchType('income')"
-        >收入</button>
+      <div class="type-toggle" :class="form.type === 'income' ? 'toggle-income' : 'toggle-expense'">
+        <div class="toggle-slider" :class="{ 'slider-right': form.type === 'income' }"></div>
+        <button class="toggle-btn" :class="{ active: form.type === 'expense' }" @click="switchType('expense')">支出</button>
+        <button class="toggle-btn" :class="{ active: form.type === 'income' }" @click="switchType('income')">收入</button>
       </div>
 
       <!-- Amount Display -->
-      <div class="amount-section">
+      <div class="amount-section" :class="form.type === 'income' ? 'amount-income' : 'amount-expense'">
         <div class="amount-value" :class="{ 'amount-placeholder': displayValue === '0' }">
           {{ displayFormatted }}
         </div>
@@ -57,17 +52,12 @@
       <!-- Section: Date -->
       <div class="section">
         <div class="section-title">日期</div>
-        <button class="date-picker-btn" @click="triggerDatePicker">
-          <span>{{ formattedDate }}</span>
-          <span class="date-arrow">&#9660;</span>
-        </button>
-        <input
-          ref="dateInputRef"
-          type="date"
-          :value="form.billDate"
-          @input="onDateChange"
-          class="date-input-hidden"
-        />
+        <picker mode="date" :value="form.billDate" @change="onDateChange">
+          <div class="date-picker-btn">
+            <span>{{ formattedDate }}</span>
+            <span class="date-arrow">&#9660;</span>
+          </div>
+        </picker>
       </div>
 
       <!-- Section: Remark -->
@@ -102,26 +92,24 @@
         <button class="key key-number" @click="inputDigit('1')">1</button>
         <button class="key key-number" @click="inputDigit('2')">2</button>
         <button class="key key-number" @click="inputDigit('3')">3</button>
+        <button class="key key-operator" @click="inputOperator('+')">+</button>
       </div>
       <div class="keyboard-row">
         <button class="key key-number" @click="inputDigit('4')">4</button>
         <button class="key key-number" @click="inputDigit('5')">5</button>
         <button class="key key-number" @click="inputDigit('6')">6</button>
+        <button class="key key-operator" @click="inputOperator('-')">−</button>
       </div>
       <div class="keyboard-row">
         <button class="key key-number" @click="inputDigit('7')">7</button>
         <button class="key key-number" @click="inputDigit('8')">8</button>
         <button class="key key-number" @click="inputDigit('9')">9</button>
+        <button class="key key-delete" @click="onDelete">&#9003;</button>
       </div>
       <div class="keyboard-row">
         <button class="key key-number" @click="inputDigit('.')">.</button>
         <button class="key key-number" @click="inputDigit('0')">0</button>
-        <button class="key key-delete" @click="onDelete">&#9003;</button>
-      </div>
-      <div class="keyboard-row row-last">
         <button class="key key-clear" @click="onClear">C</button>
-        <button class="key key-operator" @click="inputOperator('+')">+</button>
-        <button class="key key-operator" @click="inputOperator('-')">-</button>
         <button class="key key-save" @click="onSave">&#10003;</button>
       </div>
     </div>
@@ -150,21 +138,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import Decimal from 'decimal.js'
 import { getCategoriesByType } from '@/constants/categories'
 import { getToday, formatDateLabel } from '@/utils/date'
 import { validateBillForm } from '@/utils/validator'
-import { truncateToTwoDecimals, centsToYuan, yuanToCents } from '@/utils/money'
+import { truncateToTwoDecimals, centsToYuan } from '@/utils/money'
 import { createBill, updateBill, deleteBill, getBillById } from '@/services/billService'
 import { listMemos } from '@/services/memoService'
 import { useBillStore } from '@/stores/billStore'
 import { Colors, FontSize, FontWeight, Spacing, Radius, Shadow, Duration } from '@/constants/design-tokens'
 import ConfirmDialog from '@/components/ConfirmDialog/index.vue'
-import type { BillFormData, BillType, CategoryItem, Memo, Bill } from '@/types'
+import type { BillFormData, BillType, CategoryItem, Memo } from '@/types'
 
 // ===== Route / Page Params =====
-// In WeChat Mini Program, page receives params via query.
-// For this component we assume `id` query param is available via onLoad or route.
 const billId = ref('')
 const isEditMode = computed(() => !!billId.value)
 
@@ -177,12 +164,12 @@ const form = ref<BillFormData>({
   remark: '',
 })
 
-const originalForm = ref<string>('') // JSON snapshot for unsaved-changes check
+const originalForm = ref<string>('')
 const hasUnsavedChanges = ref(false)
 
 // ===== Calculator State =====
 const displayValue = ref('0')
-const accumulator = ref(0)
+const accumulator = ref(new Decimal(0))
 const pendingOperator = ref<string | null>(null)
 const isNewEntry = ref(true)
 const expressionText = ref('')
@@ -193,60 +180,66 @@ const categories = computed(() => getCategoriesByType(form.value.type))
 // ===== Memos =====
 const memos = ref<Memo[]>([])
 
-// ===== Date Picker =====
-const dateInputRef = ref<HTMLInputElement | null>(null)
+// ===== Date =====
 const formattedDate = computed(() => formatDateLabel(form.value.billDate))
 
 // ===== UI State =====
-const showDatePicker = ref(false)
 const showDeleteConfirm = ref(false)
 const showBackConfirm = ref(false)
 const errorMessage = ref('')
 const isLoading = ref(false)
 
 // ===== Computed Display =====
+function getRunningResult(): Decimal {
+  if (pendingOperator.value !== null && !isNewEntry.value) {
+    const current = new Decimal(displayValue.value || '0')
+    switch (pendingOperator.value) {
+      case '+': return accumulator.value.plus(current)
+      case '-': return accumulator.value.minus(current)
+    }
+  }
+  if (pendingOperator.value !== null && isNewEntry.value) {
+    return accumulator.value
+  }
+  return new Decimal(displayValue.value || '0')
+}
+
 const displayFormatted = computed(() => {
-  if (displayValue.value === '0' || displayValue.value === '') return '¥ 0.00'
-  return `¥ ${displayValue.value}`
+  // When actively typing (no pending operator), show raw input as-is
+  if (pendingOperator.value === null) {
+    if (displayValue.value === '0') return '¥ 0'
+    return `¥ ${displayValue.value}`
+  }
+  // When there's a pending operator, show computed running result
+  const result = getRunningResult()
+  const str = result.toFixed(2).replace(/\.?0+$/, '')
+  return `¥ ${str || '0'}`
 })
 
 // ===== Lifecycle =====
 onMounted(async () => {
-  // Get bill ID from route params (WeChat Mini Program style)
-  // In a web context, this might come from query string or store.
-  // We check a global-like access pattern for the id.
   try {
-    // @ts-ignore — wx is a WeChat Mini Program global
     const pages = getCurrentPages ? getCurrentPages() : []
     const currentPage = pages[pages.length - 1]
     if (currentPage && currentPage.options && currentPage.options.id) {
       billId.value = currentPage.options.id
     }
   } catch {
-    // Fallback: check URL params
-    const params = new URLSearchParams(window.location.search)
-    if (params.get('id')) {
-      billId.value = params.get('id')!
-    }
+    // not in mini program
   }
 
   if (billId.value) {
     await loadBill(billId.value)
   }
 
-  // Capture initial state for unsaved-changes comparison
   saveFormSnapshot()
-
-  // Load memos for initial category
   await loadMemos()
 })
 
-/** Load existing bill data for editing */
 async function loadBill(id: string) {
   isLoading.value = true
   try {
     const bill = await getBillById(id)
-    // Convert cents to yuan for display
     const amountYuan = bill.amount > 0 ? centsToYuan(bill.amount).toString() : '0'
 
     form.value = {
@@ -257,9 +250,8 @@ async function loadBill(id: string) {
       remark: bill.remark || '',
     }
 
-    // Restore calculator state
     displayValue.value = amountYuan || '0'
-    accumulator.value = 0
+    accumulator.value = new Decimal(0)
     pendingOperator.value = null
     isNewEntry.value = true
     expressionText.value = ''
@@ -270,7 +262,6 @@ async function loadBill(id: string) {
   }
 }
 
-/** Save current form as JSON for change detection */
 function saveFormSnapshot() {
   originalForm.value = JSON.stringify(form.value)
 }
@@ -300,24 +291,18 @@ function selectCategory(cat: CategoryItem) {
 // ===== Calculator Logic =====
 function inputDigit(digit: string) {
   if (isNewEntry.value) {
-    if (digit === '.') {
-      displayValue.value = '0.'
-    } else {
-      displayValue.value = digit
-    }
+    displayValue.value = digit === '.' ? '0.' : digit
     isNewEntry.value = false
   } else {
     if (digit === '.' && displayValue.value.includes('.')) return
     if (displayValue.value === '0' && digit !== '.') {
       displayValue.value = digit
-      return
+    } else {
+      displayValue.value += digit
+      displayValue.value = truncateToTwoDecimals(displayValue.value)
     }
-    displayValue.value += digit
-    // Truncate to 2 decimal places
-    displayValue.value = truncateToTwoDecimals(displayValue.value)
   }
 
-  // Remove leading zeros (e.g., "012" -> "12")
   if (displayValue.value.length > 1 && displayValue.value[0] === '0' && displayValue.value[1] !== '.') {
     displayValue.value = displayValue.value.replace(/^0+/, '')
   }
@@ -328,37 +313,28 @@ function inputDigit(digit: string) {
 }
 
 function inputOperator(op: string) {
-  // If no value entered, ignore
   if (displayValue.value === '' || displayValue.value === '.') return
   if (displayValue.value === '0' && isNewEntry.value && pendingOperator.value === null) return
 
   if (!isNewEntry.value) {
-    const current = parseFloat(displayValue.value)
+    const current = new Decimal(displayValue.value || '0')
     if (pendingOperator.value !== null) {
       compute(current)
     } else {
       accumulator.value = current
     }
-    displayValue.value = accumulator.value.toString()
   }
-  // else: isNewEntry means we already computed, just change operator
 
   pendingOperator.value = op
   isNewEntry.value = true
   updateExpression()
 }
 
-function compute(currentValue: number) {
+function compute(currentValue: Decimal) {
   switch (pendingOperator.value) {
-    case '+':
-      accumulator.value += currentValue
-      break
-    case '-':
-      accumulator.value -= currentValue
-      break
-    default:
-      accumulator.value = currentValue
-      break
+    case '+': accumulator.value = accumulator.value.plus(currentValue); break
+    case '-': accumulator.value = accumulator.value.minus(currentValue); break
+    default: accumulator.value = currentValue; break
   }
 }
 
@@ -375,7 +351,7 @@ function onDelete() {
 
 function onClear() {
   displayValue.value = '0'
-  accumulator.value = 0
+  accumulator.value = new Decimal(0)
   pendingOperator.value = null
   isNewEntry.value = true
   expressionText.value = ''
@@ -384,38 +360,39 @@ function onClear() {
 
 function updateExpression() {
   if (pendingOperator.value) {
+    const opSymbol = pendingOperator.value === '-' ? '−' : pendingOperator.value
+    const accStr = accumulator.value.toFixed(2).replace(/\.?0+$/, '') || '0'
     if (isNewEntry.value) {
-      expressionText.value = `${accumulator.value} ${pendingOperator.value}`
+      expressionText.value = `${accStr} ${opSymbol}`
     } else {
-      expressionText.value = `${accumulator.value} ${pendingOperator.value} ${displayValue.value}`
+      expressionText.value = `${accStr} ${opSymbol} ${displayValue.value}`
     }
-  } else if (accumulator.value !== 0) {
-    expressionText.value = `= ${accumulator.value}`
   } else {
     expressionText.value = ''
   }
 }
 
-/** Calculate and return the final amount */
 function computeFinalAmount(): number {
+  // Strip trailing decimal point before conversion
+  const raw = displayValue.value.replace(/\.$/, '')
   if (pendingOperator.value !== null) {
-    const current = parseFloat(displayValue.value)
+    const current = new Decimal(raw || '0')
     compute(current)
     pendingOperator.value = null
   }
-  const result = accumulator.value || parseFloat(displayValue.value) || 0
-  return result
+  const result = accumulator.value.greaterThan(0)
+    ? accumulator.value
+    : new Decimal(raw || '0')
+  return result.toNumber()
 }
 
 // ===== Save =====
 async function onSave() {
   errorMessage.value = ''
 
-  // Compute final amount from calculator
   const finalAmount = computeFinalAmount()
   form.value.amount = finalAmount.toString()
 
-  // Validate form
   const validation = validateBillForm({
     type: form.value.type,
     amount: form.value.amount,
@@ -482,10 +459,8 @@ function confirmBack() {
 
 function navigateBack() {
   try {
-    // @ts-ignore
-    if (typeof wx !== 'undefined' && wx.navigateBack) {
-      // @ts-ignore
-      wx.navigateBack()
+    if (typeof uni !== 'undefined' && uni.navigateBack) {
+      uni.navigateBack()
     } else {
       window.history.back()
     }
@@ -495,16 +470,10 @@ function navigateBack() {
 }
 
 // ===== Date Picker =====
-function triggerDatePicker() {
-  if (dateInputRef.value) {
-    dateInputRef.value.showPicker ? dateInputRef.value.showPicker() : dateInputRef.value.click()
-  }
-}
-
-function onDateChange(e: Event) {
-  const target = e.target as HTMLInputElement
-  if (target.value) {
-    form.value.billDate = target.value
+function onDateChange(e: any) {
+  const val = e.detail?.value || (e.target as HTMLInputElement)?.value
+  if (val) {
+    form.value.billDate = val
     hasUnsavedChanges.value = true
   }
 }
@@ -558,6 +527,9 @@ async function loadMemos() {
   justify-content: center;
   background: none;
   border: none;
+  outline: none;
+  box-shadow: none;
+  -webkit-appearance: none;
   cursor: pointer;
   font-size: 20px;
   color: v-bind('Colors.TextPrimary');
@@ -567,6 +539,13 @@ async function loadMemos() {
 
 .back-btn:active {
   opacity: 0.6;
+}
+
+/* WeChat Mini Program default button border reset */
+.back-btn::after,
+.delete-btn::after {
+  border: none;
+  content: none;
 }
 
 .nav-title {
@@ -586,61 +565,73 @@ async function loadMemos() {
   -webkit-overflow-scrolling: touch;
 }
 
-/* ===== Type Toggle ===== */
+/* ===== Type Toggle — Pill Style ===== */
 .type-toggle {
   display: flex;
-  padding: v-bind('Spacing.Lg') v-bind('Spacing.PageMargin') 0;
-  gap: 0;
-  border-bottom: 1px solid v-bind('Colors.Border');
-  background: v-bind('Colors.CardBg');
-}
-
-.type-tab {
-  flex: 1;
-  height: 44px;
-  background: none;
-  border: none;
-  font-size: v-bind('FontSize.Body');
-  font-weight: v-bind('FontWeight.Regular');
-  color: v-bind('Colors.TextTertiary');
-  cursor: pointer;
   position: relative;
-  transition: color v-bind('Duration.Fast') ease;
+  margin: v-bind('Spacing.Lg') v-bind('Spacing.PageMargin') 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  padding: 3px;
+  height: 40px;
 }
 
-.type-tab.active {
-  font-weight: v-bind('FontWeight.Bold');
-}
-
-.type-tab.active::after {
-  content: '';
+.toggle-slider {
   position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 40px;
-  height: 3px;
-  border-radius: 2px;
+  top: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  height: calc(100% - 6px);
+  border-radius: 22px;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
 }
 
-.type-tab.tab-expense.active {
-  color: v-bind('Colors.Expense');
-}
-
-.type-tab.tab-expense.active::after {
+.toggle-expense .toggle-slider {
   background: v-bind('Colors.Expense');
 }
 
-.type-tab.tab-income.active {
-  color: v-bind('Colors.Income');
-}
-
-.type-tab.tab-income.active::after {
+.toggle-income .toggle-slider {
   background: v-bind('Colors.Income');
 }
 
-.type-tab:active {
-  opacity: 0.7;
+.toggle-slider.slider-right {
+  transform: translateX(calc(100% + 6px));
+}
+
+.toggle-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  -webkit-appearance: none;
+  font-size: v-bind('FontSize.Body');
+  font-weight: v-bind('FontWeight.Medium');
+  color: v-bind('Colors.TextSecondary');
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+  transition: color 0.25s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.toggle-btn::after {
+  content: none;
+}
+
+.toggle-btn.active {
+  color: #FFFFFF;
+  font-weight: v-bind('FontWeight.Bold');
+}
+
+.toggle-btn:active {
+  opacity: 0.85;
 }
 
 /* ===== Amount Display ===== */
@@ -648,6 +639,15 @@ async function loadMemos() {
   background: v-bind('Colors.CardBg');
   padding: v-bind('Spacing.Xl2') v-bind('Spacing.PageMargin');
   text-align: center;
+  transition: background 0.3s ease;
+}
+
+.amount-expense {
+  border-bottom: 2px solid v-bind('Colors.ExpenseLight');
+}
+
+.amount-income {
+  border-bottom: 2px solid v-bind('Colors.IncomeLight');
 }
 
 .amount-value {
@@ -661,6 +661,14 @@ async function loadMemos() {
 
 .amount-value.amount-placeholder {
   color: v-bind('Colors.TextTertiary');
+}
+
+.amount-expense .amount-value:not(.amount-placeholder) {
+  color: v-bind('Colors.Expense');
+}
+
+.amount-income .amount-value:not(.amount-placeholder) {
+  color: v-bind('Colors.Income');
 }
 
 .amount-expression {
@@ -755,8 +763,7 @@ async function loadMemos() {
   border-radius: v-bind('Radius.Md');
   font-size: v-bind('FontSize.Body');
   color: v-bind('Colors.TextPrimary');
-  cursor: pointer;
-  transition: border-color v-bind('Duration.Fast') ease;
+  box-sizing: border-box;
 }
 
 .date-picker-btn:active {
@@ -769,20 +776,12 @@ async function loadMemos() {
   margin-left: 8px;
 }
 
-.date-input-hidden {
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
-  pointer-events: none;
-}
-
 /* ===== Remark Input ===== */
 .remark-input {
   width: 100%;
   height: 44px;
   padding: 0 v-bind('Spacing.Lg');
-  background: v-Bind('Colors.Background');
+  background: v-bind('Colors.Background');
   border: 1px solid v-bind('Colors.Border');
   border-radius: v-bind('Radius.Md');
   font-size: v-bind('FontSize.Body');
@@ -836,6 +835,9 @@ async function loadMemos() {
 .delete-btn {
   background: none;
   border: none;
+  outline: none;
+  box-shadow: none;
+  -webkit-appearance: none;
   font-size: v-bind('FontSize.Body');
   color: v-bind('Colors.Error');
   cursor: pointer;
@@ -847,7 +849,7 @@ async function loadMemos() {
   opacity: 0.6;
 }
 
-/* ===== Calculator Keyboard ===== */
+/* ===== Calculator Keyboard — 4-column grid ===== */
 .keyboard {
   flex-shrink: 0;
   background: v-bind('Colors.CardBg');
@@ -869,6 +871,9 @@ async function loadMemos() {
   flex: 1;
   height: 48px;
   border: none;
+  outline: none;
+  box-shadow: none;
+  -webkit-appearance: none;
   border-radius: v-bind('Radius.Md');
   font-size: 20px;
   font-weight: v-bind('FontWeight.Medium');
@@ -892,13 +897,15 @@ async function loadMemos() {
 }
 
 .key-operator {
-  background: v-bind('Colors.Background');
-  color: v-bind('Colors.TextPrimary');
+  background: v-bind('Colors.PrimaryLight');
+  color: v-bind('Colors.Primary');
+  font-size: 22px;
+  font-weight: v-bind('FontWeight.Bold');
 }
 
 .key-delete {
   background: v-bind('Colors.Background');
-  color: v-bind('Colors.TextPrimary');
+  color: v-bind('Colors.TextSecondary');
   font-size: 18px;
 }
 
@@ -909,7 +916,6 @@ async function loadMemos() {
 }
 
 .key-save {
-  flex: 2;
   background: v-bind('Colors.Primary');
   color: #FFFFFF;
   font-size: 22px;
@@ -953,7 +959,8 @@ async function loadMemos() {
   .category-item,
   .category-item.selected,
   .key,
-  .error-toast {
+  .error-toast,
+  .toggle-slider {
     animation: none;
     transition: none;
   }

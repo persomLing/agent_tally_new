@@ -103,6 +103,9 @@
         <button class="privacy-close-btn" @click="privacyVisible = false">我知道了</button>
       </view>
     </view>
+
+    <!-- 底部导航 -->
+    <BottomNav current="pages/profile/index" />
   </view>
 </template>
 
@@ -115,6 +118,7 @@ import { formatCents } from '@/utils/money'
 import { Colors, FontSize, FontWeight, Spacing, Radius, Shadow, ComponentSize } from '@/constants/design-tokens'
 import type { ProfileSummary } from '@/types'
 import ConfirmDialog from '@/components/ConfirmDialog/index.vue'
+import BottomNav from '@/components/BottomNav/index.vue'
 
 const userStore = useUserStore()
 const billStore = useBillStore()

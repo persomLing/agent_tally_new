@@ -13,9 +13,9 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
 const _ = db.command
+const MAX_LIMIT = 100
 
 // ===== Static category config (mirrors src/constants/categories.ts) =====
-// Categories are fixed in V1.0 — no custom add/edit/delete/hide.
 
 const EXPENSE_CATEGORIES = [
   { code: 'expense_food', name: '餐饮', type: 'expense', icon: 'utensil', color: '#F97316', sort: 1 },
@@ -50,6 +50,19 @@ function getLastNDays(n) {
   return result
 }
 
+// ===== Helper: paginated query to handle >100 docs =====
+async function getAllBills(where) {
+  var all = []
+  var offset = 0
+  while (true) {
+    var res = await db.collection('bills').where(where).skip(offset).limit(MAX_LIMIT).get()
+    all = all.concat(res.data || [])
+    if (!res.data || res.data.length < MAX_LIMIT) break
+    offset += MAX_LIMIT
+  }
+  return all
+}
+
 // ===== Main =====
 exports.main = async function (event, context) {
   try {
@@ -67,19 +80,45 @@ exports.main = async function (event, context) {
     }
 
     // ============================================================
-    // 1. Query bills for the target month
+    // 1. Collect all dates needed: month range + last 7 days
     // ============================================================
-    var monthBillsRes = await db.collection('bills')
-      .where({
-        openid: OPENID,
-        billMonth: month,
-      })
-      .get()
+    var dates = getLastNDays(7)
 
-    var monthBills = monthBillsRes.data || []
+    // Build a set of all unique dates to query in one pass
+    var allDateSet = new Set()
+    dates.forEach(function (d) { allDateSet.add(d) })
+
+    // Add all dates in the target month
+    var monthParts = month.split('-')
+    var year = parseInt(monthParts[0], 10)
+    var monthNum = parseInt(monthParts[1], 10)
+    var daysInMonth = new Date(year, monthNum, 0).getDate()
+    for (var day = 1; day <= daysInMonth; day++) {
+      var dateStr = year + '-' + String(monthNum).padStart(2, '0') + '-' + String(day).padStart(2, '0')
+      allDateSet.add(dateStr)
+    }
+
+    var allDates = []
+    allDateSet.forEach(function (d) { allDates.push(d) })
 
     // ============================================================
-    // 2. Compute summary
+    // 2. Single query: get all bills in the combined date range
+    // ============================================================
+    var allBills = await getAllBills({
+      openid: OPENID,
+      billDate: _.in(allDates),
+    })
+
+    // ============================================================
+    // 3. Split into month bills and daily bills
+    // ============================================================
+    var monthBills = []
+    allBills.forEach(function (bill) {
+      bill.billDate && bill.billDate.substring(0, 7) === month && monthBills.push(bill)
+    })
+
+    // ============================================================
+    // 4. Compute summary
     // ============================================================
     var monthIncome = 0
     var monthExpense = 0
@@ -95,7 +134,7 @@ exports.main = async function (event, context) {
     var monthBalance = monthIncome - monthExpense
 
     // ============================================================
-    // 3. Category rankings (expense only)
+    // 5. Category rankings (expense only)
     // ============================================================
     var expenseGroups = {}
 
@@ -127,12 +166,10 @@ exports.main = async function (event, context) {
       }
     })
 
-    // Sort by amount DESC
     categoryRankings.sort(function (a, b) {
       return b.amount - a.amount
     })
 
-    // Compute percentages
     var totalExpense = monthExpense
     if (totalExpense > 0) {
       categoryRankings = categoryRankings.map(function (item) {
@@ -148,23 +185,12 @@ exports.main = async function (event, context) {
     }
 
     // ============================================================
-    // 4. Daily amounts for last 7 days (NOT affected by month param)
+    // 6. Daily amounts for last 7 days
     // ============================================================
-    var dates = getLastNDays(7)
-
-    var dailyBillsRes = await db.collection('bills')
-      .where({
-        openid: OPENID,
-        billDate: _.in(dates),
-      })
-      .get()
-
-    var dailyBills = dailyBillsRes.data || []
-
     var dailyAmounts = dates.map(function (date) {
       var expense = 0
       var income = 0
-      dailyBills.forEach(function (bill) {
+      allBills.forEach(function (bill) {
         if (bill.billDate === date) {
           if (bill.type === 'expense') expense += bill.amount
           else income += bill.amount
@@ -174,7 +200,7 @@ exports.main = async function (event, context) {
     })
 
     // ============================================================
-    // 5. Top category
+    // 7. Top category
     // ============================================================
     var topCategory = null
     if (categoryRankings.length > 0) {
@@ -182,7 +208,7 @@ exports.main = async function (event, context) {
     }
 
     // ============================================================
-    // 6. Max single expense
+    // 8. Max single expense
     // ============================================================
     var maxSingleExpense = null
     var expenseBills = monthBills.filter(function (b) { return b.type === 'expense' })
@@ -200,7 +226,7 @@ exports.main = async function (event, context) {
     }
 
     // ============================================================
-    // 7. Bill count & days
+    // 9. Bill count & days
     // ============================================================
     var billCount = monthBills.length
 

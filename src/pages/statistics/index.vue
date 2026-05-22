@@ -176,6 +176,8 @@
 
     <!-- Floating bill button -->
     <FloatingBillButton @click="goToAddBill" />
+    <!-- 底部导航 -->
+    <BottomNav current="pages/statistics/index" />
   </div>
 </template>
 
@@ -189,6 +191,7 @@ import { Colors, FontSize, FontWeight, Spacing, Radius, Shadow, ComponentSize } 
 import MonthPicker from '@/components/MonthPicker/index.vue'
 import EmptyState from '@/components/EmptyState/index.vue'
 import FloatingBillButton from '@/components/FloatingBillButton/index.vue'
+import BottomNav from '@/components/BottomNav/index.vue'
 import type { StatisticsData } from '@/types'
 
 // ===== State =====
@@ -307,9 +310,7 @@ async function loadStatistics() {
 }
 
 function goToAddBill() {
-  // In production, navigate to the add-bill page
-  // WeChat Mini Program: wx.navigateTo({ url: '/pages/bill/add' })
-  console.log('Navigate to add bill')
+  uni.navigateTo({ url: '/pages/bill-edit/index' })
 }
 
 // ===== Watch & Lifecycle =====
@@ -334,7 +335,7 @@ onMounted(() => {
   background: v-bind('Colors.Background');
   padding: 0 v-bind('Spacing.PageMargin');
   padding-top: 16px;
-  padding-bottom: 24px;
+  padding-bottom: calc(v-bind('ComponentSize.BottomNavHeight') + v-bind('Spacing.Xl3'));
 }
 
 .stats-header {
