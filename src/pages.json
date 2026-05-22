@@ -1,7 +1,7 @@
 {
   "pages": [
     { "path": "pages/auth/index", "style": { "navigationBarTitleText": "授权登录" } },
-    { "path": "pages/detail/index", "style": { "navigationBarTitleText": "明细" } },
+    { "path": "pages/detail/index", "style": { "navigationBarTitleText": "明细", "enablePullDownRefresh": false, "backgroundTextStyle": "light" } },
     { "path": "pages/bill-edit/index", "style": { "navigationBarTitleText": "记账" } },
     { "path": "pages/statistics/index", "style": { "navigationBarTitleText": "统计" } },
     { "path": "pages/profile/index", "style": { "navigationBarTitleText": "我的" } }

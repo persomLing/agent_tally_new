@@ -1,6 +1,6 @@
 <template>
   <view class="profile-page">
-    <!-- ===== User Info Card ===== -->
+    <!-- User Info Card -->
     <view class="card user-card" @click="onEditProfile">
       <view class="user-avatar-wrap">
         <image v-if="hasAvatar" class="user-avatar" :src="avatar" mode="aspectFill" />
@@ -14,72 +14,73 @@
       </view>
     </view>
 
-    <!-- ===== Budget Card ===== -->
+    <!-- Budget Card -->
     <view class="card budget-card">
-      <text class="budget-title">本月预算进度</text>
+      <text class="budget-title">本月收支概览</text>
 
-      <!-- Budget progress bar -->
-      <view class="progress-track">
-        <view
-          class="progress-fill"
-          :class="progressFillClass"
-          :style="progressFillStyle"
-        />
+      <!-- 收入行 -->
+      <view class="budget-row">
+        <view class="budget-row-label">
+          <view class="budget-dot income-dot" />
+          <text class="budget-row-text">收入</text>
+        </view>
+        <text class="budget-row-amount income-amount">{{ formatYuan(profileData?.monthIncome ?? 0) }}</text>
       </view>
 
-      <!-- Budget state: normal -->
-      <view v-if="profileData && profileData.hasIncome && !profileData.isOverBudget" class="budget-state">
-        <text class="budget-percentage">{{ formattedProgress }}%</text>
-        <text class="budget-remaining">预算剩余: {{ formatYuan(profileData.budgetRemaining) }}</text>
+      <!-- 支出行 -->
+      <view class="budget-row">
+        <view class="budget-row-label">
+          <view class="budget-dot expense-dot" />
+          <text class="budget-row-text">支出</text>
+        </view>
+        <text class="budget-row-amount expense-amount">{{ formatYuan(profileData?.monthExpense ?? 0) }}</text>
       </view>
 
-      <!-- Budget state: over budget -->
-      <view v-else-if="profileData && profileData.hasIncome && profileData.isOverBudget" class="budget-state budget-state-over">
-        <text class="budget-percentage budget-percentage-over">{{ formattedProgress }}%</text>
-        <text class="budget-over-amount">已超支 {{ formatYuan(profileData.overBudgetAmount) }}</text>
+      <progress class="progress-bar" :percent="savingRate" :border-radius="3" :activeColor="savingRate >= 0 ? '#10b981' : '#ef4444'" backgroundColor="#e2e8f0" :stroke-width="6" />
+      <view class="budget-row" style="margin-bottom:12px">
+        <text class="budget-row-text">结余率</text>
+        <text class="budget-row-amount" :style="{ color: balanceColor }">{{ savingRate }}%</text>
       </view>
 
-      <!-- Budget state: no income -->
-      <view v-else-if="profileData && !profileData.hasIncome" class="budget-state budget-state-no-income">
-        <text class="budget-no-income-text">暂无收入，无法计算预算</text>
-        <text class="budget-month-expense">本月支出: {{ profileData ? formatYuan(profileData.monthExpense) : '¥0.00' }}</text>
-      </view>
-
-      <!-- Days to month end -->
-      <view class="days-to-end">
-        距离月底还有 {{ profileData?.daysToMonthEnd ?? 0 }} 天
+      <!-- 底部统计行 -->
+      <view class="budget-stats">
+        <view class="budget-stat-item">
+          <text class="budget-stat-label">结余</text>
+          <text class="budget-stat-value" :style="{ color: balanceColor }">{{ formatYuan((profileData?.monthIncome ?? 0) - (profileData?.monthExpense ?? 0)) }}</text>
+        </view>
+        <view class="budget-stat-divider" />
+        <view class="budget-stat-item">
+          <text class="budget-stat-label">{{ profileData?.isOverBudget ? '已超支' : '预算剩余' }}</text>
+          <text class="budget-stat-value" :style="{ color: profileData?.isOverBudget ? '#f43f5e' : '#10b981' }">
+            {{ profileData?.isOverBudget ? formatYuan(profileData.overBudgetAmount) : formatYuan(profileData?.budgetRemaining ?? 0) }}
+          </text>
+        </view>
+        <view class="budget-stat-divider" />
+        <view class="budget-stat-item">
+          <text class="budget-stat-label">距月底</text>
+          <text class="budget-stat-value">{{ profileData?.daysToMonthEnd ?? 0 }} 天</text>
+        </view>
       </view>
     </view>
 
-    <!-- ===== Function Entry List ===== -->
+    <!-- Function List -->
     <view class="card function-list">
-      <!-- Memo -->
       <view class="function-item" @click="onOpenMemo">
-        <text class="function-item-icon">&#x1F4DD;</text>
         <text class="function-item-label">记忆库</text>
-        <text class="function-item-arrow">&gt;</text>
+        <text class="function-item-arrow">›</text>
       </view>
-
       <view class="function-divider" />
-
-      <!-- Privacy -->
       <view class="function-item" @click="onOpenPrivacy">
-        <text class="function-item-icon">&#x1F512;</text>
         <text class="function-item-label">隐私说明</text>
-        <text class="function-item-arrow">&gt;</text>
+        <text class="function-item-arrow">›</text>
       </view>
-
       <view class="function-divider" />
-
-      <!-- Clear all bills -->
-      <view class="function-item function-item-danger" @click="onClearBills">
-        <text class="function-item-icon">&#x1F5D1;</text>
+      <view class="function-item" @click="onClearBills">
         <text class="function-item-label function-item-label-danger">清空全部账单</text>
-        <text class="function-item-arrow function-item-arrow-danger">&gt;</text>
+        <text class="function-item-arrow function-item-arrow-danger">›</text>
       </view>
     </view>
 
-    <!-- ===== Delete Confirm Dialog ===== -->
     <ConfirmDialog
       :visible="confirmVisible"
       title="清空账单"
@@ -91,26 +92,19 @@
       @update:visible="confirmVisible = $event"
     />
 
-    <!-- ===== Privacy Dialog ===== -->
-    <view v-if="privacyVisible" class="privacy-overlay" @click="privacyVisible = false">
+    <!-- Privacy Dialog -->
+    <view v-if="privacyVisible" class="overlay" @click="privacyVisible = false">
       <view class="privacy-dialog" @click.stop>
         <text class="privacy-title">隐私说明</text>
         <view class="privacy-content">
-          <text class="privacy-text">
-            本小程序仅使用您的微信头像和昵称用于个人展示，不会向第三方分享您的个人信息。所有账单数据仅存储在您个人的微信云环境中，除您本人外无法被其他用户访问。
-          </text>
-          <text class="privacy-text">
-            我们不会收集您的位置信息、通讯录等个人敏感数据。您可随时通过「清空全部账单」功能删除所有数据。
-          </text>
+          <text class="privacy-text">本小程序仅使用您的微信头像和昵称用于个人展示，不会向第三方分享您的个人信息。所有账单数据仅存储在您个人的微信云环境中，除您本人外无法被其他用户访问。</text>
+          <text class="privacy-text">我们不会收集您的位置信息、通讯录等个人敏感数据。您可随时通过「清空全部账单」功能删除所有数据。</text>
         </view>
         <button class="privacy-close-btn" @click="privacyVisible = false">我知道了</button>
       </view>
     </view>
 
-    <!-- 记忆库弹窗 -->
     <MemoModal v-model:visible="showMemoModal" @close="showMemoModal = false" />
-
-    <!-- 底部导航 -->
     <BottomNav current="pages/profile/index" />
   </view>
 </template>
@@ -121,7 +115,6 @@ import { useUserStore } from '@/stores/userStore'
 import { useBillStore } from '@/stores/billStore'
 import { getProfileSummary, clearAllBills } from '@/services/profileService'
 import { formatCents } from '@/utils/money'
-import { Colors, FontSize, FontWeight, Spacing, Radius, Shadow, ComponentSize } from '@/constants/design-tokens'
 import type { ProfileSummary } from '@/types'
 import ConfirmDialog from '@/components/ConfirmDialog/index.vue'
 import MemoModal from '@/components/MemoModal/index.vue'
@@ -129,9 +122,7 @@ import BottomNav from '@/components/BottomNav/index.vue'
 
 const userStore = useUserStore()
 const billStore = useBillStore()
-
 const profileData = ref<ProfileSummary | null>(null)
-const isLoading = ref(false)
 const confirmVisible = ref(false)
 const privacyVisible = ref(false)
 const showMemoModal = ref(false)
@@ -141,391 +132,109 @@ const avatar = computed(() => userStore.avatarUrl || profileData.value?.avatarUr
 const hasAvatar = computed(() => !!avatar.value)
 const avatarInitial = computed(() => (nickName.value || '?').charAt(0))
 
-const formattedProgress = computed(() => {
-  if (!profileData.value || profileData.value.budgetProgress < 0) return '0'
-  return Math.round(profileData.value.budgetProgress).toString()
+const savingRate = computed(() => {
+  const income = profileData.value?.monthIncome ?? 0
+  if (income === 0) return 0
+  return Math.round(((income - (profileData.value?.monthExpense ?? 0)) / income) * 100)
 })
 
-const progressFillStyle = computed(() => {
-  if (!profileData.value) return { width: '0%' }
-  if (profileData.value.budgetProgress < 0) return { width: '100%' }
-  return { width: `${Math.min(100, profileData.value.budgetProgress)}%` }
-})
+const balanceColor = computed(() => savingRate.value >= 0 ? '#10b981' : '#f43f5e')
 
-const progressFillClass = computed(() => {
-  if (!profileData.value) return ''
-  if (profileData.value.isOverBudget) return 'progress-fill-over'
-  if (!profileData.value.hasIncome) return 'progress-fill-no-income'
-  return 'progress-fill-normal'
-})
-
-function formatYuan(cents: number): string {
-  return `¥${formatCents(cents)}`
-}
+function formatYuan(cents: number) { return `¥${formatCents(cents)}` }
 
 async function loadProfile() {
-  isLoading.value = true
-  try {
-    const result = await getProfileSummary()
-    profileData.value = result
-  } catch {
-    // Error is handled by the cloud service wrapper
-    profileData.value = null
-  } finally {
-    isLoading.value = false
-  }
+  try { profileData.value = await getProfileSummary() }
+  catch { profileData.value = null }
 }
 
-function onEditProfile() {
-  // Future: navigate to edit profile page
-}
-
-function onOpenMemo() {
-  showMemoModal.value = true
-}
-
-function onOpenPrivacy() {
-  privacyVisible.value = true
-}
-
-function onClearBills() {
-  confirmVisible.value = true
-}
+function onEditProfile() {}
+function onOpenMemo() { showMemoModal.value = true }
+function onOpenPrivacy() { privacyVisible.value = true }
+function onClearBills() { confirmVisible.value = true }
 
 async function onConfirmClear() {
   confirmVisible.value = false
-  try {
-    await clearAllBills()
-    billStore.notifyBillChanged()
-    await loadProfile()
-  } catch {
-    // Error is handled by the cloud service wrapper
-  }
+  try { await clearAllBills(); billStore.notifyBillChanged(); await loadProfile() } catch {}
 }
 
-function onCancelClear() {
-  confirmVisible.value = false
-}
+function onCancelClear() { confirmVisible.value = false }
 
-// Load on mount
-onMounted(() => {
-  loadProfile()
-})
-
-// Watch global refresh key
-watch(() => billStore.refreshKey, () => {
-  loadProfile()
-})
+onMounted(() => loadProfile())
+watch(() => billStore.refreshKey, () => loadProfile())
 </script>
 
 <style scoped>
 .profile-page {
-  padding: 0 v-bind('Spacing.PageMargin');
-  padding-top: v-bind('Spacing.Xl2');
-  padding-bottom: calc(v-bind('ComponentSize.BottomNavHeight') + v-bind('Spacing.Xl3'));
+  padding: 0 16px;
+  padding-top: 24px;
+  padding-bottom: calc(50px + 32px);
   min-height: 100vh;
-  background: v-bind('Colors.Background');
+  background: #f8fafc;
 }
-
-/* ===== Card ===== */
 .card {
-  background: v-bind('Colors.CardBg');
-  border-radius: v-bind('Radius.Xl');
-  box-shadow: v-bind('Shadow.Md');
-  padding: v-bind('Spacing.Lg');
-  margin-bottom: v-bind('Spacing.Lg');
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  padding: 16px;
+  margin-bottom: 16px;
 }
-
-/* ===== User Card ===== */
-.user-card {
-  display: flex;
-  align-items: center;
-  gap: v-bind('Spacing.Md');
-  cursor: pointer;
-}
-
+.user-card { display: flex; align-items: center; gap: 12px; }
 .user-avatar-wrap {
-  width: v-bind('ComponentSize.AvatarSize');
-  height: v-bind('ComponentSize.AvatarSize');
-  border-radius: v-bind('Radius.Full');
-  flex-shrink: 0;
-  overflow: hidden;
-  background: v-bind('Colors.PrimaryLight');
+  width: 56px; height: 56px; border-radius: 50%;
+  flex-shrink: 0; overflow: hidden; background: #eff6ff;
 }
-
-.user-avatar {
-  width: 100%;
-  height: 100%;
-}
-
+.user-avatar { width: 100%; height: 100%; }
 .user-avatar-fallback {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  font-weight: v-bind('FontWeight.Bold');
-  color: v-bind('Colors.Primary');
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; font-weight: 700; color: #3b82f6;
 }
-
-.user-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: v-bind('Spacing.Xs');
-}
-
-.user-nickname {
-  font-size: v-bind('FontSize.H3');
-  font-weight: v-bind('FontWeight.SemiBold');
-  color: v-bind('Colors.TextPrimary');
-  line-height: 1.4;
-}
-
-.user-persist {
-  font-size: v-bind('FontSize.BodySmall');
-  color: v-bind('Colors.TextSecondary');
-  line-height: 1.5;
-}
-
-.persist-highlight {
-  color: v-bind('Colors.Primary');
-  font-weight: v-bind('FontWeight.Medium');
-}
-
-/* ===== Budget Card ===== */
-.budget-title {
-  display: block;
-  font-size: v-bind('FontSize.Body');
-  font-weight: v-bind('FontWeight.SemiBold');
-  color: v-bind('Colors.TextPrimary');
-  margin-bottom: v-bind('Spacing.Md');
-}
-
-.progress-track {
-  width: 100%;
-  height: v-bind('ComponentSize.ProgressBarHeight');
-  background: #E2E8F0;
-  border-radius: v-bind('Radius.Full');
-  overflow: hidden;
-  margin-bottom: v-bind('Spacing.Md');
-}
-
-.progress-fill {
-  height: 100%;
-  border-radius: v-bind('Radius.Full');
-  transition: width 400ms ease;
-}
-
-.progress-fill-normal {
-  background: v-bind('Colors.Primary');
-}
-
-.progress-fill-over {
-  background: #F43F5E;
-}
-
-.progress-fill-no-income {
-  background: v-bind('Colors.Border');
-}
-
-.budget-state {
-  margin-bottom: v-bind('Spacing.Sm');
-}
-
-.budget-percentage {
-  display: block;
-  font-size: v-bind('FontSize.Body');
-  font-weight: v-bind('FontWeight.SemiBold');
-  color: v-bind('Colors.Primary');
-  margin-bottom: v-bind('Spacing.Xs');
-}
-
-.budget-percentage-over {
-  color: #F43F5E;
-}
-
-.budget-remaining {
-  display: block;
-  font-size: v-bind('FontSize.BodySmall');
-  color: v-bind('Colors.TextSecondary');
-}
-
-.budget-state-over .budget-over-amount {
-  display: block;
-  font-size: v-bind('FontSize.BodySmall');
-  color: #F43F5E;
-  font-weight: v-bind('FontWeight.Medium');
-}
-
-.budget-state-no-income .budget-no-income-text {
-  display: block;
-  font-size: v-bind('FontSize.BodySmall');
-  color: v-bind('Colors.TextTertiary');
-  margin-bottom: v-bind('Spacing.Xs');
-}
-
-.budget-state-no-income .budget-month-expense {
-  display: block;
-  font-size: v-bind('FontSize.BodySmall');
-  color: v-bind('Colors.TextSecondary');
-}
-
-.days-to-end {
-  display: block;
-  font-size: v-bind('FontSize.Caption');
-  color: v-bind('Colors.TextTertiary');
-  margin-top: v-bind('Spacing.Sm');
-}
-
-/* ===== Function List ===== */
-.function-list {
-  padding: 0;
-  overflow: hidden;
-}
-
+.user-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.user-nickname { font-size: 17px; font-weight: 600; color: #1e293b; }
+.user-persist { font-size: 12px; color: #64748b; }
+.persist-highlight { color: #3b82f6; font-weight: 500; }
+.budget-title { display: block; font-size: 14px; font-weight: 600; color: #1e293b; margin-bottom: 12px; }
+.budget-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.budget-row-label { display: flex; align-items: center; gap: 6px; }
+.budget-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.income-dot { background: #10b981; }
+.expense-dot { background: #f43f5e; }
+.balance-dot { background: #3b82f6; }
+.progress-bar { width: 100%; height: 6px; margin-bottom: 12px; border-radius: 3px; }
+.budget-row-text { font-size: 13px; color: #64748b; }
+.budget-row-amount { font-size: 14px; font-weight: 600; }
+.income-amount { color: #10b981; }
+.expense-amount { color: #f43f5e; }
+.budget-stats { display: flex; align-items: center; padding-top: 4px; }
+.budget-stat-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.budget-stat-divider { width: 1px; height: 32px; background: #f1f5f9; }
+.budget-stat-label { font-size: 11px; color: #94a3b8; }
+.budget-stat-value { font-size: 13px; font-weight: 600; color: #1e293b; }
+.function-list { padding: 0; overflow: hidden; }
 .function-item {
-  display: flex;
-  align-items: center;
-  padding: 0 v-bind('Spacing.Lg');
-  height: v-bind('ComponentSize.ListItemHeight');
-  cursor: pointer;
-  transition: background 150ms ease;
-  -webkit-tap-highlight-color: transparent;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px; height: 52px;
 }
-
-.function-item:active {
-  background: v-bind('Colors.Background');
-}
-
-.function-item-icon {
-  font-size: v-bind('FontSize.Body');
-  margin-right: v-bind('Spacing.Md');
-  width: 24px;
-  text-align: center;
-}
-
-.function-item-label {
-  flex: 1;
-  font-size: v-bind('FontSize.Body');
-  color: v-bind('Colors.TextPrimary');
-  font-weight: v-bind('FontWeight.Regular');
-}
-
-.function-item-arrow {
-  color: v-bind('Colors.TextTertiary');
-  font-size: v-bind('FontSize.Body');
-  margin-left: v-bind('Spacing.Sm');
-}
-
-/* Danger item (clear bills) */
-.function-item-danger:active {
-  background: #FFF0F3;
-}
-
-.function-item-label-danger {
-  color: v-bind('Colors.Error');
-}
-
-.function-item-arrow-danger {
-  color: v-bind('Colors.Error');
-}
-
-.function-divider {
-  height: 1px;
-  background: v-bind('Colors.Border');
-  margin-left: v-bind('Spacing.Lg');
-}
-
-/* ===== Privacy Dialog ===== */
-.privacy-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.function-item-label { font-size: 14px; color: #1e293b; }
+.function-item-label-danger { color: #ef4444; }
+.function-item-arrow { font-size: 18px; color: #94a3b8; }
+.function-item-arrow-danger { color: #ef4444; }
+.function-divider { height: 1px; background: #f1f5f9; margin-left: 16px; }
+.overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex; align-items: center; justify-content: center;
   z-index: 1000;
-  animation: fadeIn 200ms ease-out;
 }
-
 .privacy-dialog {
-  background: v-bind('Colors.CardBg');
-  border-radius: v-bind('Radius.Xl');
-  padding: v-bind('Spacing.Xl2');
-  width: 290px;
-  max-width: 90vw;
-  box-shadow: v-bind('Shadow.Xl');
-  animation: slideUp 200ms ease-out;
+  background: #fff; border-radius: 16px;
+  padding: 24px 20px; width: 290px; max-width: 90vw;
 }
-
-.privacy-title {
-  display: block;
-  font-size: v-bind('FontSize.H3');
-  font-weight: v-bind('FontWeight.SemiBold');
-  color: v-bind('Colors.TextPrimary');
-  text-align: center;
-  margin-bottom: v-bind('Spacing.Lg');
-}
-
-.privacy-content {
-  margin-bottom: v-bind('Spacing.Xl');
-}
-
-.privacy-text {
-  display: block;
-  font-size: v-bind('FontSize.BodySmall');
-  color: v-bind('Colors.TextSecondary');
-  line-height: 1.6;
-  margin-bottom: v-bind('Spacing.Md');
-}
-
-.privacy-text:last-child {
-  margin-bottom: 0;
-}
-
+.privacy-title { display: block; font-size: 16px; font-weight: 600; color: #1e293b; text-align: center; margin-bottom: 16px; }
+.privacy-content { margin-bottom: 20px; }
+.privacy-text { display: block; font-size: 13px; color: #64748b; line-height: 1.6; margin-bottom: 12px; }
 .privacy-close-btn {
-  width: 100%;
-  height: v-bind('ComponentSize.ButtonMinHeight');
-  border: none;
-  border-radius: v-bind('Radius.Lg');
-  background: v-bind('Colors.Primary');
-  color: #fff;
-  font-size: v-bind('FontSize.Body');
-  font-weight: v-bind('FontWeight.Medium');
-  cursor: pointer;
-  transition: all 150ms ease;
-  text-align: center;
-  line-height: v-bind('ComponentSize.ButtonMinHeight');
-}
-
-.privacy-close-btn:active {
-  transform: scale(0.97);
-  background: v-bind('Colors.PrimaryDark');
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .progress-fill {
-    transition: none;
-  }
-
-  .privacy-overlay,
-  .privacy-dialog {
-    animation: none;
-  }
+  width: 100%; height: 44px; border: none; border-radius: 10px;
+  background: #3b82f6; color: #fff; font-size: 14px; font-weight: 500;
 }
 </style>

@@ -40,7 +40,7 @@ function screenHeight(): number {
 }
 
 const x = ref(screenWidth() - BTN_SIZE - MARGIN)
-const y = ref(screenHeight() - BTN_SIZE - MARGIN - 50)
+const y = ref(screenHeight() - BTN_SIZE - MARGIN - 84)
 const isDragging = ref(false)
 const hasMoved = ref(false)
 const startX = ref(0)
@@ -82,7 +82,7 @@ function onDragMove(e: TouchEvent) {
   let newY = touch.clientY - dragOffsetY.value
 
   newX = Math.max(MARGIN, Math.min(screenWidth() - BTN_SIZE - MARGIN, newX))
-  newY = Math.max(MARGIN, Math.min(screenHeight() - BTN_SIZE - MARGIN - 50, newY))
+  newY = Math.max(MARGIN, Math.min(screenHeight() - BTN_SIZE - MARGIN - 84, newY))
 
   x.value = newX
   y.value = newY
@@ -109,7 +109,7 @@ function snapToEdge() {
     x.value = MARGIN
   }
 
-  y.value = Math.max(MARGIN, Math.min(screenHeight() - BTN_SIZE - MARGIN - 50, y.value))
+  y.value = Math.max(MARGIN, Math.min(screenHeight() - BTN_SIZE - MARGIN - 84, y.value))
 }
 </script>
 

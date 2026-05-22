@@ -1,122 +1,101 @@
 <template>
-  <Transition name="memo">
-    <div v-if="visible" class="memo-modal-overlay" @click.self="onClose">
-      <div class="memo-modal" role="dialog" aria-modal="true" aria-label="记忆库">
-        <!-- Header -->
-        <div class="memo-modal-header">
-          <h2 class="memo-modal-title">记忆库</h2>
-          <button class="memo-modal-close-btn" @click="onClose" aria-label="关闭">
-            ✕
-          </button>
-        </div>
+  <!-- 底部弹出遮罩 -->
+  <view v-if="visible" class="memo-overlay" @click="onClose">
+    <view class="memo-panel" @click.stop>
+      <!-- Header -->
+      <view class="memo-header">
+        <text class="memo-title">记忆库</text>
+        <view class="memo-close" @click="onClose">✕</view>
+      </view>
 
-        <!-- Type Toggle -->
-        <div class="memo-modal-tabs">
-          <button
-            v-for="tab in typeTabs"
-            :key="tab.value"
-            class="memo-modal-tab"
-            :class="{ active: currentType === tab.value }"
-            @click="switchType(tab.value)"
-          >
-            {{ tab.label }}
-          </button>
-        </div>
+      <!-- Type Tabs -->
+      <view class="memo-tabs">
+        <view
+          v-for="(tab, i) in typeTabs" :key="tab.value"
+          class="memo-tab"
+          :class="{ 'memo-tab-active': currentType === tab.value }"
+          @click="switchType(tab.value)"
+        >{{ tab.label }}</view>
+      </view>
 
-        <!-- Body -->
-        <div class="memo-modal-body">
-          <div v-if="loading" class="memo-modal-loading">加载中...</div>
+      <!-- Body -->
+      <scroll-view scroll-y class="memo-body">
+        <view v-if="loading" class="memo-loading"><text>加载中...</text></view>
 
-          <template v-else-if="groupedCategories.length > 0">
-            <div
-              v-for="cat in groupedCategories"
-              :key="cat.code"
-              class="memo-category"
-            >
-              <!-- Category Header -->
-              <button
-                class="memo-category-header"
-                @click="toggleCategory(cat.code)"
-                :aria-expanded="isExpanded(cat.code)"
-              >
-                <span class="memo-category-arrow" :class="{ expanded: isExpanded(cat.code) }">›</span>
-                <span class="memo-category-name">{{ cat.name }}</span>
-              </button>
+        <template v-else>
+          <view v-if="groupedCategories.every(c => c.memos.length === 0 && addingCategory !== c.code)" class="memo-empty">
+            <text class="memo-empty-text">暂无常用备注</text>
+          </view>
+          <view v-for="cat in groupedCategories" :key="cat.code" class="memo-category">
+            <view class="memo-cat-header" @click="toggleCategory(cat.code)">
+              <text class="memo-cat-arrow" :class="{ expanded: isExpanded(cat.code) }">›</text>
+              <text class="memo-cat-name">{{ cat.name }}</text>
+              <text class="memo-cat-count" v-if="cat.memos.length">({{ cat.memos.length }})</text>
+            </view>
 
-              <!-- Category Body -->
-              <div v-show="isExpanded(cat.code)" class="memo-category-body">
-                <!-- Memo Items -->
-                <div v-for="memo in cat.memos" :key="memo._id" class="memo-item" :class="{ 'memo-item-editing': editingId === memo._id }">
-                  <!-- Inline Edit Mode -->
-                  <div v-if="editingId === memo._id" class="memo-inline-edit">
-                    <input
-                      v-model="editContent"
-                      class="memo-inline-input"
-                      :class="{ 'memo-inline-input-error': editError }"
-                      placeholder="输入备注内容"
-                      maxlength="200"
-                      @keyup.enter="saveEdit(memo)"
-                    />
-                    <p v-if="editError" class="memo-inline-error">{{ editError }}</p>
-                    <div class="memo-inline-actions">
-                      <button class="memo-inline-btn memo-inline-btn-cancel" @click="cancelEdit">取消</button>
-                      <button class="memo-inline-btn memo-inline-btn-save" @click="saveEdit(memo)">保存</button>
-                    </div>
-                  </div>
-
-                  <!-- Display Mode -->
-                  <div v-else class="memo-item-display">
-                    <span class="memo-item-text" @click="selectMemo(memo)">{{ memo.content }}</span>
-                    <div class="memo-item-actions">
-                      <button class="memo-item-action-btn" @click="startEdit(memo)" aria-label="编辑">✎</button>
-                      <button class="memo-item-action-btn memo-item-action-btn-delete" @click="confirmDelete(memo)" aria-label="删除">✕</button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Add New Memo -->
-                <div v-if="addingCategory === cat.code" class="memo-inline-edit">
+            <view v-show="isExpanded(cat.code)" class="memo-cat-body">
+              <view v-for="memo in cat.memos" :key="memo._id" class="memo-item">
+                <!-- Edit mode -->
+                <view v-if="editingId === memo._id" class="memo-edit-wrap">
                   <input
-                    v-model="newContent"
-                    class="memo-inline-input"
-                    :class="{ 'memo-inline-input-error': addError }"
-                    placeholder="输入新备注"
+                    class="memo-input"
+                    :class="{ 'memo-input-error': editError }"
+                    v-model="editContent"
+                    placeholder="输入备注内容"
                     maxlength="200"
-                    @keyup.enter="saveNew(cat.code, cat.name)"
                   />
-                  <p v-if="addError" class="memo-inline-error">{{ addError }}</p>
-                  <div class="memo-inline-actions">
-                    <button class="memo-inline-btn memo-inline-btn-cancel" @click="cancelAdd">取消</button>
-                    <button class="memo-inline-btn memo-inline-btn-save" @click="saveNew(cat.code, cat.name)">保存</button>
-                  </div>
-                </div>
-                <button v-else class="memo-add-btn" @click="startAdd(cat.code)">
-                  + 新增备注
-                </button>
-              </div>
-            </div>
-          </template>
+                  <text v-if="editError" class="memo-err">{{ editError }}</text>
+                  <view class="memo-edit-btns">
+                    <view class="memo-btn memo-btn-cancel" @click="cancelEdit">取消</view>
+                    <view class="memo-btn memo-btn-save" @click="saveEdit(memo)">保存</view>
+                  </view>
+                </view>
+                <!-- Display mode -->
+                <view v-else class="memo-item-row">
+                  <text class="memo-item-text" @click="selectMemo(memo)">{{ memo.content }}</text>
+                  <view class="memo-item-actions">
+                    <view class="memo-action-btn" @click="startEdit(memo)">✎</view>
+                    <view class="memo-action-btn memo-action-del" @click="confirmDelete(memo)">✕</view>
+                  </view>
+                </view>
+              </view>
 
-          <!-- Empty State -->
-          <div v-else class="memo-empty">
-            <EmptyState text="暂无常用备注" />
-          </div>
-        </div>
-      </div>
+              <!-- Add new -->
+              <view v-if="addingCategory === cat.code" class="memo-edit-wrap">
+                <input
+                  class="memo-input"
+                  :class="{ 'memo-input-error': addError }"
+                  v-model="newContent"
+                  placeholder="输入新备注"
+                  maxlength="200"
+                />
+                <text v-if="addError" class="memo-err">{{ addError }}</text>
+                <view class="memo-edit-btns">
+                  <view class="memo-btn memo-btn-cancel" @click="cancelAdd">取消</view>
+                  <view class="memo-btn memo-btn-save" @click="saveNew(cat.code)">保存</view>
+                </view>
+              </view>
+              <view v-else class="memo-add-btn" @click="startAdd(cat.code)">
+                <text class="memo-add-text">+ 新增备注</text>
+              </view>
+            </view>
+          </view>
+        </template>
+      </scroll-view>
+    </view>
 
-      <!-- Delete Confirm Dialog -->
-      <ConfirmDialog
-        :visible="confirmVisible"
-        title="删除备注"
-        :message="deleteMessage"
-        confirmText="删除"
-        :danger="true"
-        @confirm="doDelete"
-        @cancel="confirmVisible = false"
-        @update:visible="confirmVisible = $event"
-      />
-    </div>
-  </Transition>
+    <!-- Delete Confirm -->
+    <ConfirmDialog
+      :visible="confirmVisible"
+      title="删除备注"
+      :message="`确定删除「${deletingMemo?.content || ''}」吗？`"
+      confirmText="删除"
+      :danger="true"
+      @confirm="doDelete"
+      @cancel="confirmVisible = false"
+      @update:visible="confirmVisible = $event"
+    />
+  </view>
 </template>
 
 <script setup lang="ts">
@@ -125,16 +104,12 @@ import { listMemos, createMemo, updateMemo, deleteMemo } from '@/services/memoSe
 import { getCategoriesByType } from '@/constants/categories'
 import { validateMemoContent } from '@/utils/validator'
 import ConfirmDialog from '@/components/ConfirmDialog/index.vue'
-import EmptyState from '@/components/EmptyState/index.vue'
-import { Colors, Radius, FontSize, FontWeight, Spacing, Duration, ComponentSize, Shadow } from '@/constants/design-tokens'
 import type { Memo, BillType } from '@/types'
 
 const props = withDefaults(defineProps<{
   visible: boolean
   type?: BillType
-}>(), {
-  type: 'expense',
-})
+}>(), { type: 'expense' })
 
 const emit = defineEmits<{
   close: []
@@ -142,7 +117,6 @@ const emit = defineEmits<{
   'update:visible': [value: boolean]
 }>()
 
-// ===== State =====
 const currentType = ref<BillType>(props.type)
 const memos = ref<Memo[]>([])
 const loading = ref(false)
@@ -161,31 +135,17 @@ const typeTabs = [
   { label: '收入', value: 'income' as BillType },
 ]
 
-// ===== Computed =====
-interface CategoryGroup {
-  code: string
-  name: string
-  memos: Memo[]
-}
+interface CategoryGroup { code: string; name: string; memos: Memo[] }
 
-const groupedCategories = computed<CategoryGroup[]>(() => {
-  const categories = getCategoriesByType(currentType.value)
-  return categories.map((cat) => ({
+const groupedCategories = computed<CategoryGroup[]>(() =>
+  getCategoriesByType(currentType.value).map((cat) => ({
     code: cat.code,
     name: cat.name,
     memos: memos.value.filter((m) => m.categoryCode === cat.code),
   }))
-})
+)
 
-const deleteMessage = computed(() => {
-  return `确定删除「${deletingMemo.value?.content || ''}」吗？`
-})
-
-// ===== Methods =====
-
-function selectMemo(memo: Memo) {
-  emit('select', memo.content)
-}
+function selectMemo(memo: Memo) { emit('select', memo.content) }
 
 function onClose() {
   resetEditing()
@@ -193,16 +153,11 @@ function onClose() {
   emit('update:visible', false)
 }
 
-function expandAllCategories() {
-  const categories = getCategoriesByType(currentType.value)
-  expandedCategories.value = categories.map((c) => c.code)
-}
-
 async function loadMemos() {
   loading.value = true
   try {
     memos.value = await listMemos({ type: currentType.value })
-    expandAllCategories()
+    expandedCategories.value = getCategoriesByType(currentType.value).map((c) => c.code)
   } catch {
     memos.value = []
   } finally {
@@ -216,502 +171,160 @@ function switchType(type: BillType) {
   loadMemos()
 }
 
-function isExpanded(code: string): boolean {
-  return expandedCategories.value.includes(code)
-}
+function isExpanded(code: string) { return expandedCategories.value.includes(code) }
 
 function toggleCategory(code: string) {
   const idx = expandedCategories.value.indexOf(code)
-  if (idx >= 0) {
-    expandedCategories.value.splice(idx, 1)
-  } else {
-    expandedCategories.value.push(code)
-  }
+  if (idx >= 0) expandedCategories.value.splice(idx, 1)
+  else expandedCategories.value.push(code)
 }
-
-// ===== Editing =====
 
 function resetEditing() {
-  editingId.value = null
-  editContent.value = ''
-  editError.value = ''
-  addingCategory.value = null
-  newContent.value = ''
-  addError.value = ''
+  editingId.value = null; editContent.value = ''; editError.value = ''
+  addingCategory.value = null; newContent.value = ''; addError.value = ''
 }
 
-function startEdit(memo: Memo) {
-  resetEditing()
-  editingId.value = memo._id!
-  editContent.value = memo.content
-}
-
-function cancelEdit() {
-  editingId.value = null
-  editContent.value = ''
-  editError.value = ''
-}
+function startEdit(memo: Memo) { resetEditing(); editingId.value = memo._id!; editContent.value = memo.content }
+function cancelEdit() { editingId.value = null; editContent.value = ''; editError.value = '' }
 
 async function saveEdit(memo: Memo) {
-  const validation = validateMemoContent(editContent.value)
-  if (!validation.valid) {
-    editError.value = validation.error || '备注内容无效'
-    return
-  }
+  const v = validateMemoContent(editContent.value)
+  if (!v.valid) { editError.value = v.error || '备注内容无效'; return }
   editError.value = ''
   try {
     await updateMemo(memo._id!, editContent.value.trim())
-    // Update local state
-    const target = memos.value.find((m) => m._id === memo._id)
-    if (target) {
-      target.content = editContent.value.trim()
-    }
+    const t = memos.value.find((m) => m._id === memo._id)
+    if (t) t.content = editContent.value.trim()
     resetEditing()
-  } catch {
-    editError.value = '保存失败，请重试'
-  }
+  } catch { editError.value = '保存失败，请重试' }
 }
 
-function startAdd(categoryCode: string) {
-  resetEditing()
-  addingCategory.value = categoryCode
-}
+function startAdd(code: string) { resetEditing(); addingCategory.value = code }
+function cancelAdd() { addingCategory.value = null; newContent.value = ''; addError.value = '' }
 
-function cancelAdd() {
-  addingCategory.value = null
-  newContent.value = ''
-  addError.value = ''
-}
-
-async function saveNew(categoryCode: string, categoryName: string) {
-  const validation = validateMemoContent(newContent.value)
-  if (!validation.valid) {
-    addError.value = validation.error || '备注内容无效'
-    return
-  }
+async function saveNew(categoryCode: string) {
+  const v = validateMemoContent(newContent.value)
+  if (!v.valid) { addError.value = v.error || '备注内容无效'; return }
   addError.value = ''
   try {
-    const memoId = await createMemo({
-      type: currentType.value,
-      categoryCode,
-      content: newContent.value.trim(),
-    })
-    // Refresh memos to get the latest list (handles dedup and limit)
+    await createMemo({ type: currentType.value, categoryCode, content: newContent.value.trim() })
     await loadMemos()
     resetEditing()
-  } catch {
-    addError.value = '保存失败，请重试'
-  }
+  } catch { addError.value = '保存失败，请重试' }
 }
 
-function confirmDelete(memo: Memo) {
-  deletingMemo.value = memo
-  confirmVisible.value = true
-}
+function confirmDelete(memo: Memo) { deletingMemo.value = memo; confirmVisible.value = true }
 
 async function doDelete() {
   if (!deletingMemo.value?._id) return
   try {
     await deleteMemo(deletingMemo.value._id)
-    // Remove from local state
     const idx = memos.value.findIndex((m) => m._id === deletingMemo.value!._id)
-    if (idx >= 0) {
-      memos.value.splice(idx, 1)
-    }
-  } catch {
-    // Silently fail — error is already shown by the service
-  } finally {
-    confirmVisible.value = false
-    deletingMemo.value = null
+    if (idx >= 0) memos.value.splice(idx, 1)
+  } catch {} finally {
+    confirmVisible.value = false; deletingMemo.value = null
   }
 }
 
-// ===== Watchers =====
-
-watch(
-  () => props.visible,
-  (newVal) => {
-    if (newVal) {
-      currentType.value = props.type
-      loadMemos()
-    } else {
-      resetEditing()
-    }
-  },
-)
+watch(() => props.visible, (val) => {
+  if (val) { currentType.value = props.type; loadMemos() }
+  else resetEditing()
+})
 </script>
 
 <style scoped>
-/* ===== Overlay ===== */
-.memo-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
+.memo-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
   z-index: 1000;
+  display: flex; flex-direction: column; justify-content: flex-end;
 }
-
-/* ===== Modal Panel ===== */
-.memo-modal {
-  background: v-bind('Colors.CardBg');
-  border-radius: v-bind('Radius.Xl') v-bind('Radius.Xl') 0 0;
-  width: 100%;
-  max-width: 428px;
+.memo-panel {
+  background: #fff;
+  border-radius: 16px 16px 0 0;
   max-height: 75vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: v-bind('Shadow.Xl');
+  display: flex; flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom, 0);
 }
-
-/* ===== Header ===== */
-.memo-modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: v-bind('Spacing.Lg') v-bind('Spacing.Xl');
-  border-bottom: 1px solid v-bind('Colors.Border');
+.memo-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid #f1f5f9;
   flex-shrink: 0;
 }
-
-.memo-modal-title {
-  font-size: v-bind('FontSize.H3');
-  font-weight: v-bind('FontWeight.SemiBold');
-  color: v-bind('Colors.TextPrimary');
-  margin: 0;
+.memo-title { font-size: 16px; font-weight: 600; color: #1e293b; }
+.memo-close {
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; color: #94a3b8;
 }
-
-.memo-modal-close-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border: none;
-  background: transparent;
-  color: v-bind('Colors.TextTertiary');
-  cursor: pointer;
-  border-radius: v-bind('Radius.Full');
-  transition: background v-bind('Duration.Instant') ease;
-  -webkit-tap-highlight-color: transparent;
+.memo-tabs {
+  display: flex; flex-shrink: 0;
+  border-bottom: 1px solid #f1f5f9;
 }
-
-.memo-modal-close-btn:active {
-  background: v-bind('Colors.Background');
-}
-
-/* ===== Type Tabs ===== */
-.memo-modal-tabs {
-  display: flex;
-  padding: v-bind('Spacing.Sm') v-bind('Spacing.Xl');
-  gap: 0;
-  border-bottom: 1px solid v-bind('Colors.Border');
-  flex-shrink: 0;
-}
-
-.memo-modal-tab {
-  flex: 1;
-  height: v-bind('ComponentSize.ButtonMinHeight');
-  border: none;
-  background: transparent;
-  font-size: v-bind('FontSize.Body');
-  font-weight: v-bind('FontWeight.Medium');
-  color: v-bind('Colors.TextTertiary');
-  cursor: pointer;
+.memo-tab {
+  flex: 1; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; color: #94a3b8; font-weight: 500;
   position: relative;
-  transition: color v-bind('Duration.Instant') ease;
-  -webkit-tap-highlight-color: transparent;
 }
-
-.memo-modal-tab.active {
-  color: v-bind('Colors.Primary');
-  font-weight: v-bind('FontWeight.SemiBold');
+.memo-tab-active {
+  color: #3b82f6; font-weight: 600;
 }
-
-.memo-modal-tab.active::after {
+.memo-tab-active::after {
   content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 24px;
-  height: 3px;
-  background: v-bind('Colors.Primary');
-  border-radius: 2px;
+  position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 24px; height: 2px; background: #3b82f6; border-radius: 2px;
 }
-
-/* ===== Body ===== */
-.memo-modal-body {
-  flex: 1;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 0 0 v-bind('Spacing.Xl2');
+.memo-body { flex: 1; overflow-y: auto; }
+.memo-loading { padding: 40px; text-align: center; color: #94a3b8; font-size: 14px; }
+.memo-empty { padding: 40px; text-align: center; }
+.memo-empty-text { font-size: 14px; color: #94a3b8; }
+.memo-category { border-bottom: 1px solid #f8fafc; }
+.memo-cat-header {
+  display: flex; align-items: center; gap: 6px;
+  padding: 12px 20px; min-height: 44px;
 }
-
-.memo-modal-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: v-bind('Spacing.Xl3') 0;
-  color: v-bind('Colors.TextTertiary');
-  font-size: v-bind('FontSize.Body');
+.memo-cat-arrow {
+  font-size: 18px; color: #94a3b8; line-height: 1;
+  transition: transform 0.2s;
+  display: inline-block;
 }
-
-/* ===== Category Group ===== */
-.memo-category {
-  border-bottom: 1px solid v-bind('Colors.Border');
+.memo-cat-arrow.expanded { transform: rotate(90deg); }
+.memo-cat-name { font-size: 14px; font-weight: 500; color: #1e293b; flex: 1; }
+.memo-cat-count { font-size: 12px; color: #94a3b8; }
+.memo-cat-body { padding: 0 20px 8px; }
+.memo-item { padding: 4px 0; }
+.memo-item-row { display: flex; align-items: center; justify-content: space-between; min-height: 36px; }
+.memo-item-text { flex: 1; font-size: 13px; color: #475569; line-height: 1.5; padding: 4px 0; }
+.memo-item-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.memo-action-btn {
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; color: #94a3b8;
 }
-
-.memo-category:last-child {
-  border-bottom: none;
-}
-
-.memo-category-header {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  padding: v-bind('Spacing.Md') v-bind('Spacing.Xl');
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  gap: v-bind('Spacing.Sm');
-  transition: background v-bind('Duration.Instant') ease;
-  -webkit-tap-highlight-color: transparent;
-  min-height: v-bind('ComponentSize.ListItemHeight');
-}
-
-.memo-category-header:active {
-  background: v-bind('Colors.Background');
-}
-
-.memo-category-arrow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  color: v-bind('Colors.TextTertiary');
-  transition: transform v-bind('Duration.Fast') ease;
-  flex-shrink: 0;
-}
-
-.memo-category-arrow.expanded {
-  transform: rotate(90deg);
-}
-
-.memo-category-name {
-  font-size: v-bind('FontSize.Body');
-  font-weight: v-bind('FontWeight.Medium');
-  color: v-bind('Colors.TextPrimary');
-}
-
-.memo-category-body {
-  padding: 0 v-bind('Spacing.Xl') v-bind('Spacing.Sm');
-}
-
-/* ===== Memo Item ===== */
-.memo-item {
-  padding: v-bind('Spacing.Sm') 0;
-}
-
-.memo-item-display {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: v-bind('Spacing.Sm');
-}
-
-.memo-item-text {
-  flex: 1;
-  font-size: v-bind('FontSize.BodySmall');
-  color: v-bind('Colors.TextSecondary');
-  line-height: 1.5;
-  word-break: break-word;
-  cursor: pointer;
-  padding: 4px 0;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.memo-item-text:active {
-  opacity: 0.6;
-}
-
-.memo-item-actions {
-  display: flex;
-  gap: v-bind('Spacing.Xs');
-  flex-shrink: 0;
-}
-
-.memo-item-action-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: none;
-  outline: none;
-  box-shadow: none;
-  -webkit-appearance: none;
-  background: transparent;
-  color: v-bind('Colors.TextTertiary');
-  font-size: 16px;
-  cursor: pointer;
-  border-radius: v-bind('Radius.Md');
-  transition: background v-bind('Duration.Instant') ease, color v-bind('Duration.Instant') ease;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.memo-item-action-btn::after {
-  content: none;
-  border: none;
-}
-
-.memo-item-action-btn:active {
-  background: v-bind('Colors.Background');
-}
-
-.memo-item-action-btn-delete:active {
-  color: v-bind('Colors.Error');
-}
-
-/* ===== Inline Edit ===== */
-.memo-inline-edit {
-  padding: v-bind('Spacing.Sm') 0;
-}
-
-.memo-inline-input {
-  width: 100%;
-  height: 44px;
-  padding: 0 v-bind('Spacing.Md');
-  border: 1px solid v-bind('Colors.Border');
-  border-radius: v-bind('Radius.Md');
-  font-size: v-bind('FontSize.Body');
-  color: v-bind('Colors.TextPrimary');
-  background: v-bind('Colors.Background');
-  outline: none;
+.memo-action-del:active { color: #ef4444; }
+.memo-edit-wrap { padding: 6px 0; }
+.memo-input {
+  width: 100%; height: 40px; padding: 0 12px;
+  border: 1px solid #e2e8f0; border-radius: 8px;
+  font-size: 14px; color: #1e293b; background: #f8fafc;
   box-sizing: border-box;
-  transition: border-color v-bind('Duration.Instant') ease;
 }
-
-.memo-inline-input:focus {
-  border-color: v-bind('Colors.Primary');
+.memo-input-error { border-color: #ef4444; }
+.memo-err { display: block; font-size: 12px; color: #ef4444; margin-top: 4px; }
+.memo-edit-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+.memo-btn {
+  height: 32px; padding: 0 16px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 6px; font-size: 13px; font-weight: 500;
 }
-
-.memo-inline-input-error {
-  border-color: v-bind('Colors.Error');
-}
-
-.memo-inline-error {
-  margin: v-bind('Spacing.Xs') 0 0;
-  font-size: v-bind('FontSize.Caption');
-  color: v-bind('Colors.Error');
-}
-
-.memo-inline-actions {
-  display: flex;
-  gap: v-bind('Spacing.Sm');
-  justify-content: flex-end;
-  margin-top: v-bind('Spacing.Sm');
-}
-
-.memo-inline-btn {
-  height: 36px;
-  padding: 0 v-bind('Spacing.Lg');
-  border: none;
-  border-radius: v-bind('Radius.Md');
-  font-size: v-bind('FontSize.BodySmall');
-  font-weight: v-bind('FontWeight.Medium');
-  cursor: pointer;
-  transition: opacity v-bind('Duration.Instant') ease;
-  -webkit-tap-highlight-color: transparent;
-  min-width: 60px;
-}
-
-.memo-inline-btn:active {
-  opacity: 0.7;
-}
-
-.memo-inline-btn-cancel {
-  background: v-bind('Colors.Background');
-  color: v-bind('Colors.TextSecondary');
-}
-
-.memo-inline-btn-save {
-  background: v-bind('Colors.Primary');
-  color: #fff;
-}
-
-/* ===== Add New Memo Button ===== */
+.memo-btn-cancel { background: #f1f5f9; color: #64748b; }
+.memo-btn-save { background: #3b82f6; color: #fff; }
 .memo-add-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 40px;
-  margin-top: v-bind('Spacing.Sm');
-  border: 1px dashed v-bind('Colors.Border');
-  border-radius: v-bind('Radius.Md');
-  background: transparent;
-  color: v-bind('Colors.TextTertiary');
-  font-size: v-bind('FontSize.BodySmall');
-  cursor: pointer;
-  transition: border-color v-bind('Duration.Instant') ease, color v-bind('Duration.Instant') ease;
-  -webkit-tap-highlight-color: transparent;
+  height: 36px; margin-top: 4px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px dashed #e2e8f0; border-radius: 8px;
 }
-
-.memo-add-btn:active {
-  border-color: v-bind('Colors.Primary');
-  color: v-bind('Colors.Primary');
-}
-
-/* ===== Empty State ===== */
-.memo-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* ===== Transitions ===== */
-.memo-enter-active {
-  transition: opacity 200ms ease-out;
-}
-.memo-leave-active {
-  transition: opacity 150ms ease-in;
-}
-.memo-enter-from,
-.memo-leave-to {
-  opacity: 0;
-}
-
-.memo-enter-active .memo-modal {
-  transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-.memo-leave-active .memo-modal {
-  transition: transform 200ms ease-in;
-}
-.memo-enter-from .memo-modal,
-.memo-leave-to .memo-modal {
-  transform: translateY(100%);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .memo-enter-active,
-  .memo-leave-active,
-  .memo-enter-active .memo-modal,
-  .memo-leave-active .memo-modal {
-    transition: none;
-  }
-  .memo-enter-from,
-  .memo-leave-to {
-    opacity: 1;
-  }
-  .memo-enter-from .memo-modal,
-  .memo-leave-to .memo-modal {
-    transform: none;
-  }
-}
+.memo-add-text { font-size: 13px; color: #94a3b8; }
 </style>

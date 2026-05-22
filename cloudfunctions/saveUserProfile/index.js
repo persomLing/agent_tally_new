@@ -1,6 +1,6 @@
 /**
  * 保存用户授权信息云函数
- * 更新用户的 nickName、avatarUrl，并将 authorized 置为 true。
+ * 更新用户的 nickName、avatarUrl（应为 cloud:// fileID），并将 authorized 置为 true。
  * 返回 CloudResult<UserProfile>
  */
 const cloud = require('wx-server-sdk')
@@ -21,11 +21,11 @@ exports.main = async (event, context) => {
 
   const { nickName, avatarUrl } = event
 
-  if (!nickName || !avatarUrl) {
+  if (!nickName) {
     return {
       success: false,
       errorCode: 'AUTH_FAILED',
-      message: '授权信息不完整',
+      message: '昵称不能为空',
     }
   }
 
@@ -33,15 +33,17 @@ exports.main = async (event, context) => {
     const now = Date.now()
     const updateData = {
       nickName,
-      avatarUrl,
       authorized: true,
       firstAuthorizedAt: now,
       updatedAt: now,
     }
 
+    if (avatarUrl) {
+      updateData.avatarUrl = avatarUrl
+    }
+
     await usersCollection.where({ openid: OPENID }).update({ data: updateData })
 
-    // 查询更新后的数据
     const result = await usersCollection.where({ openid: OPENID }).get()
 
     if (result.data.length === 0) {
