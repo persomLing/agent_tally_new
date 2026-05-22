@@ -6,10 +6,7 @@
         <div class="memo-modal-header">
           <h2 class="memo-modal-title">记忆库</h2>
           <button class="memo-modal-close-btn" @click="onClose" aria-label="关闭">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+            ✕
           </button>
         </div>
 
@@ -42,11 +39,7 @@
                 @click="toggleCategory(cat.code)"
                 :aria-expanded="isExpanded(cat.code)"
               >
-                <span class="memo-category-arrow" :class="{ expanded: isExpanded(cat.code) }">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
-                </span>
+                <span class="memo-category-arrow" :class="{ expanded: isExpanded(cat.code) }">›</span>
                 <span class="memo-category-name">{{ cat.name }}</span>
               </button>
 
@@ -75,18 +68,8 @@
                   <div v-else class="memo-item-display">
                     <span class="memo-item-text" @click="selectMemo(memo)">{{ memo.content }}</span>
                     <div class="memo-item-actions">
-                      <button class="memo-item-action-btn" @click="startEdit(memo)" aria-label="编辑">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                        </svg>
-                      </button>
-                      <button class="memo-item-action-btn memo-item-action-btn-delete" @click="confirmDelete(memo)" aria-label="删除">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                        </svg>
-                      </button>
+                      <button class="memo-item-action-btn" @click="startEdit(memo)" aria-label="编辑">✎</button>
+                      <button class="memo-item-action-btn memo-item-action-btn-delete" @click="confirmDelete(memo)" aria-label="删除">✕</button>
                     </div>
                   </div>
                 </div>
@@ -570,12 +553,21 @@ watch(
   width: 36px;
   height: 36px;
   border: none;
+  outline: none;
+  box-shadow: none;
+  -webkit-appearance: none;
   background: transparent;
   color: v-bind('Colors.TextTertiary');
+  font-size: 16px;
   cursor: pointer;
   border-radius: v-bind('Radius.Md');
   transition: background v-bind('Duration.Instant') ease, color v-bind('Duration.Instant') ease;
   -webkit-tap-highlight-color: transparent;
+}
+
+.memo-item-action-btn::after {
+  content: none;
+  border: none;
 }
 
 .memo-item-action-btn:active {
