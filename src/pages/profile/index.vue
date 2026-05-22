@@ -2,7 +2,10 @@
   <view class="profile-page">
     <!-- ===== User Info Card ===== -->
     <view class="card user-card" @click="onEditProfile">
-      <image class="user-avatar" :src="avatar" mode="aspectFill" />
+      <view class="user-avatar-wrap">
+        <image v-if="hasAvatar" class="user-avatar" :src="avatar" mode="aspectFill" />
+        <view v-else class="user-avatar-fallback">{{ avatarInitial }}</view>
+      </view>
       <view class="user-info">
         <text class="user-nickname">{{ nickName }}</text>
         <text class="user-persist">
@@ -130,6 +133,8 @@ const privacyVisible = ref(false)
 
 const nickName = computed(() => userStore.nickName || profileData.value?.nickName || '')
 const avatar = computed(() => userStore.avatarUrl || profileData.value?.avatarUrl || '')
+const hasAvatar = computed(() => !!avatar.value)
+const avatarInitial = computed(() => (nickName.value || '?').charAt(0))
 
 const formattedProgress = computed(() => {
   if (!profileData.value || profileData.value.budgetProgress < 0) return '0'
@@ -171,8 +176,7 @@ function onEditProfile() {
 }
 
 function onOpenMemo() {
-  // Navigate to memo page or emit event to open memo modal
-  uni.navigateTo({ url: '/pages/memo/index' })
+  uni.showToast({ title: '功能开发中', icon: 'none' })
 }
 
 function onOpenPrivacy() {
@@ -235,12 +239,29 @@ watch(() => billStore.refreshKey, () => {
   cursor: pointer;
 }
 
-.user-avatar {
+.user-avatar-wrap {
   width: v-bind('ComponentSize.AvatarSize');
   height: v-bind('ComponentSize.AvatarSize');
   border-radius: v-bind('Radius.Full');
   flex-shrink: 0;
-  background: v-bind('Colors.Border');
+  overflow: hidden;
+  background: v-bind('Colors.PrimaryLight');
+}
+
+.user-avatar {
+  width: 100%;
+  height: 100%;
+}
+
+.user-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: v-bind('FontWeight.Bold');
+  color: v-bind('Colors.Primary');
 }
 
 .user-info {

@@ -854,7 +854,7 @@ async function loadMemos() {
   flex-shrink: 0;
   background: v-bind('Colors.CardBg');
   border-top: 1px solid v-bind('Colors.Border');
-  padding: 8px v-bind('Spacing.PageMargin') env(safe-area-inset-bottom, 8px);
+  padding: 8px v-bind('Spacing.PageMargin') calc(env(safe-area-inset-bottom, 0px) + 12px);
 }
 
 .keyboard-row {
