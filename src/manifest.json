@@ -1,8 +1,8 @@
 {
   "name": "个人记账",
-  "appid": "wxb15dc0bf97a52b63",
+  "appid": "%VITE_WX_APPID%",
   "mp-weixin": {
-    "appid": "wxb15dc0bf97a52b63",
+    "appid": "%VITE_WX_APPID%",
     "setting": {
       "urlCheck": false
     },

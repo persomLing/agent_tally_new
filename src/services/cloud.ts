@@ -7,7 +7,7 @@ function ensureInit() {
   if (typeof wx?.cloud?.init === 'function') {
     try {
       // @ts-ignore WeChat SDK
-      wx.cloud.init({ env: 'cloud1-d2goyji7jb6c9f8b5', traceUser: true })
+      wx.cloud.init({ env: import.meta.env.VITE_WX_CLOUD_ENV || 'cloud1-d2goyji7jb6c9f8b5', traceUser: true })
     } catch {
       // cloud SDK unavailable
     }
