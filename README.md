@@ -1,6 +1,12 @@
-# 个人记账小程序 V1.0
+<p align="center">
+  <img src="static/logo_wx.png" width="120" alt="Logo">
+</p>
 
-基于 Vue 3 + TypeScript + 微信云开发的个人记账微信小程序。
+<h1 align="center">个人记账小程序 V1.0</h1>
+
+<p align="center">
+  基于 Vue 3 + TypeScript + 微信云开发的个人记账微信小程序
+</p>
 
 ## 技术栈
 

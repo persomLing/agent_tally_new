@@ -15,7 +15,14 @@
       "Bash(git status *)",
       "Bash(git check-ignore *)",
       "Bash(npx uni-app *)",
-      "Bash(grep *)"
+      "Bash(grep *)",
+      "Bash(git -C \"D:/sy/2026/new-learn-sy-2027/agent_tally_new\" add .gitignore package.json src/App.vue src/pages/auth/index.vue src/services/cloud.ts cloudfunctions/clearBills/package.json cloudfunctions/getProfileSummary/package.json cloudfunctions/getStatistics/package.json cloudfunctions/listBillsByMonth/package.json cloudfunctions/login/package.json cloudfunctions/saveUserProfile/package.json)",
+      "Bash(git -C D:/sy/2026/new-learn-sy-2027/agent_tally_new commit -m ' *)",
+      "Bash(git *)",
+      "Bash(npm *)",
+      "Bash(node -e \"console.log\\('NODE_AVAILABLE'\\)\")",
+      "WebSearch",
+      "WebFetch(domain:www.uvui.cn)"
     ]
   },
   "skillOverrides": {}
