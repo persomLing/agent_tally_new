@@ -22,7 +22,9 @@
       "Bash(npm *)",
       "Bash(node -e \"console.log\\('NODE_AVAILABLE'\\)\")",
       "WebSearch",
-      "WebFetch(domain:www.uvui.cn)"
+      "WebFetch(domain:www.uvui.cn)",
+      "Bash(mkdir -p \"D:/sy/2026/new-learn-sy-2027/agent_tally_new/static\")",
+      "Bash(cp \"D:/sy/2026/new-learn-sy-2027/agent_tally_new/logo_wx.png\" \"D:/sy/2026/new-learn-sy-2027/agent_tally_new/static/logo_wx.png\")"
     ]
   },
   "skillOverrides": {}
